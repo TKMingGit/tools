@@ -49,8 +49,8 @@
   </div>
 
   <script>
-    let gpsCoords = [[118.102942,39.222989],[118.085904,39.229089],[118.078566,39.226927],[118.076978,39.225796],[118.099852,39.217846]];
-    const map = L.map('map').setView([22.759242, 113.436109], 13);
+    let gpsCoords = [[118.102942,39.222989],[118.085904,39.229089],[118.078566,39.226927],[118.076978,39.225796],[118.099852,39.217846],[118.102942,39.222989]];
+    const map = L.map('map').setView([118.102942,39.222989], 13);
 	  
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
@@ -244,15 +244,15 @@
 	}
 	
 	// 围栏内部示例点
-	const internalPoints = [[118.086154, 39.226449], [118.090016, 39.224420]];
+	const internalPoints = [[118.086154,39.226449], [118.090016,39.224420]];
 	internalPoints.forEach(([lng, lat]) => addPoint(lat, lng, greenIcon, "绿色标记点"));
 	
 	// 围栏上示例点
-	const onPoints = [[118.085904, 39.229089], [118.078566, 39.226927]]
+	const onPoints = [[118.085904,39.229089], [118.078566,39.226927]]
 	onPoints.forEach(([lng, lat]) => addPoint(lat, lng, redIcon, "红色标记点"));
 	
 	// 围栏外部示例点
-	const externalPoints = [[118.093448, 39.229675], [118.096838, 39.227945]];
+	const externalPoints = [[118.093448,39.229675], [118.096838,39.227945]];
 	externalPoints.forEach(([lng, lat]) => addPoint(lat, lng, blueIcon, "蓝色标记点"));
 
     function showAddPointDialog() {
