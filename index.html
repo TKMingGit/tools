@@ -1,284 +1,284 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>GPS路径轨迹地图</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-  <style>
-    #map {
-      height: 60vh;
-      width: 100%;
-      margin-bottom: 10px;
-    }
-    textarea {
-      font-family: monospace;
-    }
-    button {
-      margin: 4px 0;
-    }
-  </style>
+    <title>GPS路径轨迹地图</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <style>
+        #map {
+            height: 60vh;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        textarea {
+            font-family: monospace;
+        }
+        button {
+            margin: 4px 0;
+        }
+    </style>
 </head>
 <body>
-  <h2>🗺️ GPS 点位标注地图</h2>
-  <div id="map"></div>
+<h2>🗺️ GPS 点位标注地图</h2>
+<div id="map"></div>
 
-  <div style="padding:10px;">
-	<h3>
-      <label for="gpsPathInput">电子围栏点位集合 🧭</label><textarea id="gpsPathInput" rows="6" style="width:100%;" placeholder="格式：lng,lat 每行一个点"></textarea>
-      <button onclick="renderPath()">📍 渲染电子围栏</button>
-      <button onclick="exportPath()">📤 导出电子围栏</button>
-      <input type="file" id="importPathFile"  accept=".json,application/json" style="display:none" onchange="importPathFromFile(event)">
-      <button onclick="document.getElementById('importPathFile').click()">📥 导入轨迹 JSON</button>
-      <button onclick="exportPointsAsJSON()" style="margin-top:10px;">📤 导出绿色点</button>
-      <button onclick="showAddPointDialog()">➕ 新增绿色点</button>
-      <button onclick="startDrawPolygon()">✏️ 绘制围栏并生成路径</button>
-      <button onclick="clearAllMarkers()" style="margin-top:10px;background:#ffdddd;color:#900;">🧹 清除全部点位</button>
-      <div id="addPointDialog" style="display:none; padding:10px; margin-top:10px; border:1px solid #ccc; border-radius:8px; width: 30%">
-        <label>名称: <input type="text" id="newName" placeholder="可选"></label><br>
-        <label>纬度(-90至90): <input type="number" id="newLat" step="0.000001"></label><br>
-        <label>经度(-180至180): <input type="number" id="newLng" step="0.000001"></label><br>
-        <button onclick="addGreenPointFromDialog()">✅ 确定</button>
-      <button onclick="hideAddPointDialog()">❌ 取消</button>
-      </div>
+<div style="padding:10px;">
+    <h3>
+        <label for="gpsPathInput">电子围栏点位集合 🧭</label><textarea id="gpsPathInput" rows="6" style="width:100%;" placeholder="格式：lng,lat 每行一个点"></textarea>
+        <button onclick="renderPath()">📍 渲染电子围栏</button>
+        <button onclick="exportPath()">📤 导出电子围栏</button>
+        <input type="file" id="importPathFile"  accept=".json,application/json" style="display:none" onchange="importPathFromFile(event)">
+        <button onclick="document.getElementById('importPathFile').click()">📥 导入轨迹 JSON</button>
+        <button onclick="exportPointsAsJSON()" style="margin-top:10px;">📤 导出绿色点</button>
+        <button onclick="showAddPointDialog()">➕ 新增绿色点</button>
+        <button onclick="startDrawPolygon()">✏️ 绘制围栏并生成路径</button>
+        <button onclick="clearAllMarkers()" style="margin-top:10px;background:#ffdddd;color:#900;">🧹 清除全部点位</button>
+        <div id="addPointDialog" style="display:none; padding:10px; margin-top:10px; border:1px solid #ccc; border-radius:8px; width: 30%">
+            <label>名称: <input type="text" id="newName" placeholder="可选"></label><br>
+            <label>纬度(-90至90): <input type="number" id="newLat" step="0.000001"></label><br>
+            <label>经度(-180至180): <input type="number" id="newLng" step="0.000001"></label><br>
+            <button onclick="addGreenPointFromDialog()">✅ 确定</button>
+            <button onclick="hideAddPointDialog()">❌ 取消</button>
+        </div>
     </h3>
-  </div>
+</div>
 
-  <script>
+<script>
     let gpsCoords = [[118.102942,39.222989],[118.085904,39.229089],[118.078566,39.226927],[118.076978,39.225796],[118.099852,39.217846],[118.102942,39.222989]];
     const map = L.map('map').setView([118.102942,39.222989], 13);
-	  
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
     let polyline = L.polygon(gpsCoords.map(([lng, lat]) => [lat, lng]), {
         color: 'blue', fillColor: '#3388ff', fillOpacity: 0.2
     }).addTo(map);
 
-	map.fitBounds(polyline.getBounds());
-	
-	initGpsPathInput();
+    map.fitBounds(polyline.getBounds());
 
-	function initGpsPathInput() {
-	  const input = document.getElementById('gpsPathInput');
-	  if (!input) return;
+    initGpsPathInput();
 
-	  // 格式化为每行 "lng,lat"
+    function initGpsPathInput() {
+        const input = document.getElementById('gpsPathInput');
+        if (!input) return;
+
+        // 格式化为每行 "lng,lat"
         input.value = gpsCoords.map(([lng, lat]) => `${lng},${lat}`).join('\n');
-	}
+    }
 
-	// 渲染轨迹路径函数
-	function renderPath() {
-	  const input = document.getElementById("gpsPathInput").value.trim();
-	  if (!input) {
-		alert("❌ 请输入轨迹路径点坐标！");
-		return;
-	  }
+    // 渲染轨迹路径函数
+    function renderPath() {
+        const input = document.getElementById("gpsPathInput").value.trim();
+        if (!input) {
+            alert("❌ 请输入轨迹路径点坐标！");
+            return;
+        }
 
-	  const coords = input.split('\n').map(line => {
-		const [lng, lat] = line.split(',').map(s => parseFloat(s.trim()));
-		return !isNaN(lat) && !isNaN(lng) ? [lng, lat] : null;
-	  }).filter(Boolean);
+        const coords = input.split('\n').map(line => {
+            const [lng, lat] = line.split(',').map(s => parseFloat(s.trim()));
+            return !isNaN(lat) && !isNaN(lng) ? [lng, lat] : null;
+        }).filter(Boolean);
 
-	  if (coords.length === 0) {
-		alert("❌ 没有有效的坐标点！");
-		return;
-	  }
+        if (coords.length === 0) {
+            alert("❌ 没有有效的坐标点！");
+            return;
+        }
 
-	  // 移除旧线
-	  map.removeLayer(polyline);
-	  gpsCoords = coords;
+        // 移除旧线
+        map.removeLayer(polyline);
+        gpsCoords = coords;
 
-	  if (gpsCoords.length > 2) {
-		const first = gpsCoords[0];
-		const last = gpsCoords[gpsCoords.length - 1];
-			if (first[0] !== last[0] || first[1] !== last[1]) {
-			gpsCoords.push(first);
-		}
-	  }
+        if (gpsCoords.length > 2) {
+            const first = gpsCoords[0];
+            const last = gpsCoords[gpsCoords.length - 1];
+            if (first[0] !== last[0] || first[1] !== last[1]) {
+                gpsCoords.push(first);
+            }
+        }
 
-	  // 重新添加线
-	  polyline = L.polygon(gpsCoords.map(([lng, lat]) => [lat, lng]), {color: 'blue', fillColor: '#3388ff', fillOpacity: 0.2}).addTo(map);
+        // 重新添加线
+        polyline = L.polygon(gpsCoords.map(([lng, lat]) => [lat, lng]), {color: 'blue', fillColor: '#3388ff', fillOpacity: 0.2}).addTo(map);
 
-	  map.fitBounds(polyline.getBounds());
-	}
+        map.fitBounds(polyline.getBounds());
+    }
 
     const redIcon = L.icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      shadowSize: [41, 41]
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        shadowSize: [41, 41]
     });
 
     const blueIcon = L.icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      shadowSize: [41, 41]
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        shadowSize: [41, 41]
     });
 
     const greenIcon = L.icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      shadowSize: [41, 41]
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        shadowSize: [41, 41]
     });
 
     let selectedInput = null;
     const greenMarkers = [];
 
     function exportPointsAsJSON() {
-	  if (greenMarkers.length === 0) {
-		alert("⚠️ 没有可导出的绿色点！");
-		return;
-	  }
+        if (greenMarkers.length === 0) {
+            alert("⚠️ 没有可导出的绿色点！");
+            return;
+        }
 
-	  const greenPoints = greenMarkers.map(marker => {
-		const { lat, lng } = marker.getLatLng();
-		return {
-		  lat: parseFloat(lat.toFixed(6)),
-		  lng: parseFloat(lng.toFixed(6))
-		};
-	  });
+        const greenPoints = greenMarkers.map(marker => {
+            const { lat, lng } = marker.getLatLng();
+            return {
+                lat: parseFloat(lat.toFixed(6)),
+                lng: parseFloat(lng.toFixed(6))
+            };
+        });
 
-	  const blob = new Blob([JSON.stringify(greenPoints, null, 2)], { type: 'application/json' });
-	  const a = document.createElement('a');
-	  a.href = URL.createObjectURL(blob);
-	  a.download = 'greenPoints.json';
-	  a.click();
-	  URL.revokeObjectURL(a.href);
-	}
+        const blob = new Blob([JSON.stringify(greenPoints, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'greenPoints.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
 
-	function exportPath() {
-	  if (!gpsCoords || gpsCoords.length === 0) {
-		alert("⚠️ 当前无轨迹路径可导出！");
-		return;
-	  }
+    function exportPath() {
+        if (!gpsCoords || gpsCoords.length === 0) {
+            alert("⚠️ 当前无轨迹路径可导出！");
+            return;
+        }
 
-	  // 将 [lng, lat] 格式转为 { lat, lng }
-	  const path = gpsCoords.map(([lng, lat]) => ({
-		lat: parseFloat(lat.toFixed(6)),
-		lng: parseFloat(lng.toFixed(6))
-	  }));
+        // 将 [lng, lat] 格式转为 { lat, lng }
+        const path = gpsCoords.map(([lng, lat]) => ({
+            lat: parseFloat(lat.toFixed(6)),
+            lng: parseFloat(lng.toFixed(6))
+        }));
 
-	  const blob = new Blob([JSON.stringify(path, null, 2)], { type: 'application/json' });
-	  const a = document.createElement('a');
-	  a.href = URL.createObjectURL(blob);
-	  a.download = 'gpsPath.json';
-	  a.click();
-	  URL.revokeObjectURL(a.href);
-	}
+        const blob = new Blob([JSON.stringify(path, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'gpsPath.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
 
     map.on('click', function (e) {
-      const { lat, lng } = e.latlng;
+        const { lat, lng } = e.latlng;
 
-      if (selectedInput) {
-        const textarea = document.getElementById(selectedInput);
-        const newLine = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-        textarea.value += (textarea.value ? '\n' : '') + newLine;
-      } else {
-        addPoint(lat, lng, greenIcon, "绿色标记点");
-	  }
+        if (selectedInput) {
+            const textarea = document.getElementById(selectedInput);
+            const newLine = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+            textarea.value += (textarea.value ? '\n' : '') + newLine;
+        } else {
+            addPoint(lat, lng, greenIcon, "绿色标记点");
+        }
     });
-	
-	function addPoint(lat, lng, icon, name) {
-	  const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
 
-      const tip = icon === greenIcon ? "🟢" : (icon === redIcon ? "🔴" : "🔵");
+    function addPoint(lat, lng, icon, name) {
+        const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
 
-	  const popupContent = `
+        const tip = icon === greenIcon ? "🟢" : (icon === redIcon ? "🔴" : "🔵");
+
+        const popupContent = `
 		${tip} ${name || '标记点'}<br>
 		纬度: ${lat.toFixed(6)}<br>
 		经度: ${lng.toFixed(6)}<br><br>
 		<button onclick="removeMarker(${marker._leaflet_id})">🗑️</button>
 		<button onclick="checkPointInFence(${lat}, ${lng})">📏</button>`;
-	  marker.bindPopup(popupContent);
+        marker.bindPopup(popupContent);
 
-      marker.dragging.enable();
-      marker.on('dragend', function (e) {
-          const newLatLng = e.target.getLatLng();
-          const newLat = newLatLng.lat.toFixed(6);
-          const newLng = newLatLng.lng.toFixed(6);
+        marker.dragging.enable();
+        marker.on('dragend', function (e) {
+            const newLatLng = e.target.getLatLng();
+            const newLat = newLatLng.lat.toFixed(6);
+            const newLng = newLatLng.lng.toFixed(6);
 
-          // ✅ 更新 popup 内容（删除旧的按钮引用，避免坐标错乱）
-          const updatedPopup = `
+            // ✅ 更新 popup 内容（删除旧的按钮引用，避免坐标错乱）
+            const updatedPopup = `
             🟢 ${name || '标记点'}<br>
             纬度: ${newLat}<br>
             经度: ${newLng}<br><br>
             <button onclick="removeMarker(${marker._leaflet_id})">🗑️</button>
             <button onclick="checkPointInFence(${newLat}, ${newLng})">📏</button>`;
-          marker.bindPopup(updatedPopup);
-      });
-	  
-	  if (icon === greenIcon) {
-		greenMarkers.push(marker);
-	  }
-	}
-	
-	function removeMarker(id) {
-      const marker = greenMarkers.find(m => m._leaflet_id === id);
-      if (marker) {
-        map.removeLayer(marker);
-        const index = greenMarkers.indexOf(marker);
-        if (index > -1) greenMarkers.splice(index, 1);
-      } else {
-          alert("⚠️ 仅绿色点允许删除！");
-      }
-    }
-	
-	function checkPointInFence(lat, lng) {
-	  const pt = turf.point([lng, lat]);
-	  const polygonGeojson = turf.polygon([gpsCoords]);
-	  const inside = turf.booleanPointInPolygon(pt, polygonGeojson);
+            marker.bindPopup(updatedPopup);
+        });
 
-	  alert(`📍 点 [${lat.toFixed(6)}, ${lng.toFixed(6)}] ${inside ? '✅ 在' : '❌ 不在'} 电子围栏内`);
-	}
-	
-	// 围栏内部示例点
-	const internalPoints = [[118.086154,39.226449], [118.090016,39.224420]];
-	internalPoints.forEach(([lng, lat]) => addPoint(lat, lng, greenIcon, "绿色标记点"));
-	
-	// 围栏上示例点
-	const onPoints = [[118.085904,39.229089], [118.078566,39.226927]]
-	onPoints.forEach(([lng, lat]) => addPoint(lat, lng, redIcon, "红色标记点"));
-	
-	// 围栏外部示例点
-	const externalPoints = [[118.093448,39.229675], [118.096838,39.227945]];
-	externalPoints.forEach(([lng, lat]) => addPoint(lat, lng, blueIcon, "蓝色标记点"));
+        if (icon === greenIcon) {
+            greenMarkers.push(marker);
+        }
+    }
+
+    function removeMarker(id) {
+        const marker = greenMarkers.find(m => m._leaflet_id === id);
+        if (marker) {
+            map.removeLayer(marker);
+            const index = greenMarkers.indexOf(marker);
+            if (index > -1) greenMarkers.splice(index, 1);
+        } else {
+            alert("⚠️ 仅绿色点允许删除！");
+        }
+    }
+
+    function checkPointInFence(lat, lng) {
+        const pt = turf.point([lng, lat]);
+        const polygonGeojson = turf.polygon([gpsCoords]);
+        const inside = turf.booleanPointInPolygon(pt, polygonGeojson);
+
+        alert(`📍 点 [${lat.toFixed(6)}, ${lng.toFixed(6)}] ${inside ? '✅ 在' : '❌ 不在'} 电子围栏内`);
+    }
+
+    // 围栏内部示例点
+    const internalPoints = [[118.086154,39.226449], [118.090016,39.224420]];
+    internalPoints.forEach(([lng, lat]) => addPoint(lat, lng, greenIcon, "绿色标记点"));
+
+    // 围栏上示例点
+    const onPoints = [[118.085904,39.229089], [118.078566,39.226927]]
+    onPoints.forEach(([lng, lat]) => addPoint(lat, lng, redIcon, "红色标记点"));
+
+    // 围栏外部示例点
+    const externalPoints = [[118.093448,39.229675], [118.096838,39.227945]];
+    externalPoints.forEach(([lng, lat]) => addPoint(lat, lng, blueIcon, "蓝色标记点"));
 
     function showAddPointDialog() {
-      document.getElementById('addPointDialog').style.display = 'block';
+        document.getElementById('addPointDialog').style.display = 'block';
     }
 
     function hideAddPointDialog() {
-      document.getElementById('addPointDialog').style.display = 'none';
+        document.getElementById('addPointDialog').style.display = 'none';
     }
 
     function addGreenPointFromDialog() {
-      const lat = parseFloat(document.getElementById('newLat').value);
-      const lng = parseFloat(document.getElementById('newLng').value);
-      const name = document.getElementById('newName').value.trim();
+        const lat = parseFloat(document.getElementById('newLat').value);
+        const lng = parseFloat(document.getElementById('newLng').value);
+        const name = document.getElementById('newName').value.trim();
 
-      if (isNaN(lat) || isNaN(lng)) {
-        alert("❌ 请正确输入经纬度！");
-        return;
-      }
+        if (isNaN(lat) || isNaN(lng)) {
+            alert("❌ 请正确输入经纬度！");
+            return;
+        }
 
-      addPoint(lat, lng, greenIcon, name);
+        addPoint(lat, lng, greenIcon, name);
 
-      hideAddPointDialog();
-      document.getElementById('newLat').value = '';
-      document.getElementById('newLng').value = '';
-      document.getElementById('newName').value = '';
+        hideAddPointDialog();
+        document.getElementById('newLat').value = '';
+        document.getElementById('newLng').value = '';
+        document.getElementById('newName').value = '';
     }
 
     const drawControl = new L.Control.Draw({
@@ -369,20 +369,21 @@
         reader.readAsText(file);
     }
 
+    let polyline2 = L.polyline([], {
+        color: 'blue',
+        weight: 5
+    });
     function renderLine(lines) {
         const coords = lines.map(line => {
             const [lng, lat] = line.split(',').map(s => parseFloat(s.trim()));
             return !isNaN(lat) && !isNaN(lng) ? [lat, lng] : null;
         }).filter(Boolean);
-
-        map.removeLayer(polyline);
-
-        polyline = L.polyline(coords, {
+        map.removeLayer(polyline2);
+        polyline2 = L.polyline(coords, {
             color: 'blue',
             weight: 5
         }).addTo(map);
-
-        map.fitBounds(polyline.getBounds());
+        map.fitBounds(polyline2.getBounds());
     }
 
     function clearAllMarkers() {
@@ -393,10 +394,10 @@
         map.eachLayer(function(layer) {
             if (layer instanceof L.Marker && layer.options.icon &&
                 (layer.options.icon === redIcon || layer.options.icon === blueIcon)) {
-      		    map.removeLayer(layer);
+                map.removeLayer(layer);
             }
         });
     }
-  </script>
+</script>
 </body>
 </html>
