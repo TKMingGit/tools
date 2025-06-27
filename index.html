@@ -368,22 +368,81 @@
         reader.readAsText(file);
     }
 
+    let polyline2Markers = [];
     let polyline2 = L.polyline([], {
         color: 'blue',
         weight: 5
     });
+
     function renderLine(lines) {
+        // 先清除旧的轨迹点marker
+        polyline2Markers.forEach(marker => map.removeLayer(marker));
+        polyline2Markers = [];
+
         const coords = lines.map(line => {
             const [lng, lat] = line.split(',').map(s => parseFloat(s.trim()));
             return !isNaN(lat) && !isNaN(lng) ? [lat, lng] : null;
         }).filter(Boolean);
-        map.removeLayer(polyline2);
+
+        // 移除旧轨迹线
+        if (polyline2) {
+            map.removeLayer(polyline2);
+        }
+
         polyline2 = L.polyline(coords, {
             color: 'blue',
             weight: 5
         }).addTo(map);
+
+        // 为轨迹线上的每个点添加方向箭头marker
+        for (let i = 0; i < coords.length; i++) {
+            const [lat1, lng1] = coords[i];
+            let [lat2, lng2] = coords[i];
+            if (i < coords.length - 1) {
+                [lat2, lng2] = coords[i + 1];
+            }
+            const bearing = calculateBearing(lat1, lng1, lat2, lng2);
+            const marker = L.marker([lat1, lng1], { icon: createArrowIcon(bearing)}).addTo(map);
+            const popupContent = `
+                🔴轨迹点<br>
+                纬度: ${lat1.toFixed(6)}<br>
+                经度: ${lng1.toFixed(6)}<br><br>
+                <button onclick="checkPointInFence(${lat1}, ${lng1})">📏</button>`;
+            marker.bindPopup(popupContent);
+            polyline2Markers.push(marker);
+        }
+
         map.fitBounds(polyline2.getBounds());
     }
+
+    function calculateBearing(lat1, lng1, lat2, lng2) {
+        const toRad = Math.PI / 180;
+        const toDeg = 180 / Math.PI;
+
+        const φ1 = lat1 * toRad;
+        const φ2 = lat2 * toRad;
+        const Δλ = (lng2 - lng1) * toRad;
+
+        const y = Math.sin(Δλ) * Math.cos(φ2);
+        const x = Math.cos(φ1) * Math.sin(φ2) -
+            Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+        let θ = Math.atan2(y, x);
+        θ = θ * toDeg;
+        return (θ + 360) % 360; // 归一化到0-360度
+    }
+
+    function createArrowIcon(angle) {
+        return L.divIcon({
+            className: 'arrow-icon',
+            html: '▲',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
+            popupAnchor: [0, -10],
+            // 通过style旋转箭头
+            html: `<div style="transform: rotate(${angle}deg); font-size: 20px; color: red;">▲</div>`
+        });
+    }
+
 
     function clearAllMarkers() {
         // 移除绿色点
