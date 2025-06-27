@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html xmlns="http://www.w3.org/1999/html">
 <head>
     <title>GPS路径轨迹地图</title>
     <meta charset="utf-8" />
@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
     <style>
         #map {
-            height: 60vh;
+            height: 70vh;
             width: 100%;
             margin-bottom: 10px;
         }
@@ -29,7 +29,22 @@
 
 <div style="padding:10px;">
     <h3>
-        <label for="gpsPathInput">电子围栏点位集合 🧭</label><textarea id="gpsPathInput" rows="6" style="width:100%;" placeholder="格式：lng,lat 每行一个点"></textarea>
+        <div>
+            <div>
+                <label for="gpsPathInput">电子围栏点位集合 🧭</label>
+                <br/>
+                <textarea id="gpsPathInput" rows="6" style="width:30%;" placeholder="格式：lng,lat 每行一个点"></textarea>
+                <br/>
+            </div>
+            <div id="addPointDialog" style="display:none; padding:10px; margin-top:10px; border:1px solid #ccc; border-radius:8px; width: 30%">
+                <label>名称: <input type="text" id="newName" placeholder="可选"></label><br>
+                <label>纬度(-90至90): <input type="number" id="newLat" step="0.000001"></label><br>
+                <label>经度(-180至180): <input type="number" id="newLng" step="0.000001"></label><br>
+                <button onclick="addGreenPointFromDialog()">✅ 确定</button>
+                <button onclick="hideAddPointDialog()">❌ 取消</button>
+            </div>
+        </div>
+
         <button onclick="renderPath()">📍 渲染电子围栏</button>
         <button onclick="exportPath()">📤 导出电子围栏</button>
         <input type="file" id="importPathFile"  accept=".json,application/json" style="display:none" onchange="importPathFromFile(event)">
@@ -38,13 +53,6 @@
         <button onclick="showAddPointDialog()">➕ 新增绿色点</button>
         <button onclick="startDrawPolygon()">✏️ 绘制围栏并生成路径</button>
         <button onclick="clearAllMarkers()" style="margin-top:10px;background:#ffdddd;color:#900;">🧹 清除全部点位</button>
-        <div id="addPointDialog" style="display:none; padding:10px; margin-top:10px; border:1px solid #ccc; border-radius:8px; width: 30%">
-            <label>名称: <input type="text" id="newName" placeholder="可选"></label><br>
-            <label>纬度(-90至90): <input type="number" id="newLat" step="0.000001"></label><br>
-            <label>经度(-180至180): <input type="number" id="newLng" step="0.000001"></label><br>
-            <button onclick="addGreenPointFromDialog()">✅ 确定</button>
-            <button onclick="hideAddPointDialog()">❌ 取消</button>
-        </div>
     </h3>
 </div>
 
