@@ -37,6 +37,7 @@
       <button onclick="exportPointsAsJSON()" style="margin-top:10px;">📤 导出绿色点</button>
       <button onclick="showAddPointDialog()">➕ 新增绿色点</button>
       <button onclick="startDrawPolygon()">✏️ 绘制围栏并生成路径</button>
+      <button onclick="clearAllMarkers()" style="margin-top:10px;background:#ffdddd;color:#900;">🧹 清除全部点位</button>
       <div id="addPointDialog" style="display:none; padding:10px; margin-top:10px; border:1px solid #ccc; border-radius:8px; width: 30%">
         <label>名称: <input type="text" id="newName" placeholder="可选"></label><br>
         <label>纬度(-90至90): <input type="number" id="newLat" step="0.000001"></label><br>
@@ -384,6 +385,18 @@
         map.fitBounds(polyline.getBounds());
     }
 
+    function clearAllMarkers() {
+        // 移除绿色点
+        greenMarkers.forEach(marker => map.removeLayer(marker));
+        greenMarkers.length = 0;
+        // 查找并移除地图上的所有红色和蓝色点
+        map.eachLayer(function(layer) {
+            if (layer instanceof L.Marker && layer.options.icon &&
+                (layer.options.icon === redIcon || layer.options.icon === blueIcon)) {
+      		    map.removeLayer(layer);
+            }
+        });
+    }
   </script>
 </body>
 </html>
