@@ -42,7 +42,7 @@
     <h3>
         <div>
             <div>
-                <label for="gpsPathInput">电子围栏点位集合 🧭</label>
+                <label for="gpsPathInput">围栏点位集合 🧭</label>
                 <br/>
                 <textarea id="gpsPathInput" rows="6" style="width:30%;" placeholder="格式：lng,lat 每行一个点"></textarea>
                 <br/>
@@ -56,14 +56,14 @@
             </div>
         </div>
 
-        <button onclick="renderPath()">📍 渲染电子围栏</button>
-        <button onclick="exportPath()">📤 导出电子围栏</button>
-        <input type="file" id="importPathFile"  accept=".json,application/json" style="display:none" onchange="importPathFromFile(event)">
-        <button onclick="document.getElementById('importPathFile').click()">📥 导入轨迹 JSON</button>
-        <button onclick="exportPointsAsJSON()" style="margin-top:10px;">📤 导出绿色点</button>
+        <button onclick="renderPath()">📍 渲染围栏</button>
+        <button onclick="startDrawPolygon()">✏️ 绘制围栏</button>
+        <button onclick="exportPath()">📤 导出围栏(高德坐标)</button>
         <button onclick="showAddPointDialog()">➕ 新增绿色点</button>
-        <button onclick="startDrawPolygon()">✏️ 绘制围栏并生成路径</button>
-        <button onclick="clearAllMarkers()" style="margin-top:10px;background:#ffdddd;color:#900;">🧹 清除全部点位</button>
+        <button onclick="exportPointsAsJSON()" style="margin-top:10px;">📤 导出绿色点(高德坐标)</button>
+        <input type="file" id="importPathFile"  accept=".json,application/json" style="display:none" onchange="importPathFromFile(event)">
+        <button onclick="document.getElementById('importPathFile').click()">📥 导入轨迹(高德坐标)</button>
+        <button onclick="clearAllMarkers()" style="margin-top:10px;background:#ffdddd;color:#900;">🧹 清除点位</button>
     </h3>
 </div>
 
@@ -150,9 +150,12 @@
 
         const greenPoints = greenMarkers.map(marker => {
             const { lat, lng } = marker.getLatLng();
+            const [gcjLng, gcjLat] = wgs84ToGcj02(lng, lat);
             return {
-                lat: parseFloat(lat.toFixed(6)),
-                lng: parseFloat(lng.toFixed(6))
+                latitude: parseFloat(gcjLat.toFixed(6)),
+                longitude: parseFloat(gcjLng.toFixed(6)),
+                type: 2,
+                address: ""
             };
         });
 
@@ -171,10 +174,15 @@
         }
 
         // 将 [lng, lat] 格式转为 { lat, lng }
-        const path = gpsCoords.map(([lng, lat]) => ({
-            lat: parseFloat(lat.toFixed(6)),
-            lng: parseFloat(lng.toFixed(6))
-        }));
+        const path = gpsCoords.map(([lng, lat]) => {
+            const [gcjLng, gcjLat] = wgs84ToGcj02(lng, lat);
+            return {
+                latitude: parseFloat(gcjLat.toFixed(6)),
+                longitude: parseFloat(gcjLng.toFixed(6)),
+                type: 2,
+                address: ""
+            };
+        });
 
         const blob = new Blob([JSON.stringify(path, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
@@ -349,11 +357,12 @@
                     return;
                 }
 
-                // 生成 lng,lat 文本
+                // 转换 GCJ-02 到 WGS-84
                 const lines = json.map(p => {
-                    const lng = parseFloat(p.longitude);
-                    const lat = parseFloat(p.latitude);
-                    return `${lng.toFixed(6)},${lat.toFixed(6)}`;
+                    const gcjLng = parseFloat(p.longitude);
+                    const gcjLat = parseFloat(p.latitude);
+                    const [wgsLng, wgsLat] = gcj02ToWgs84(gcjLng, gcjLat);
+                    return `${wgsLng.toFixed(6)},${wgsLat.toFixed(6)}`;
                 }).filter(Boolean);
 
                 if (lines.length === 0) {
@@ -449,7 +458,6 @@
         });
     }
 
-
     function clearAllMarkers() {
         // 移除绿色点
         greenMarkers.forEach(marker => map.removeLayer(marker));
@@ -462,6 +470,81 @@
             }
         });
     }
+
+    // 判断是否在中国境内
+    function outOfChina1(lng, lat) {
+        return (lng < 72.004 || lng > 137.8347) || (lat < 0.8293 || lat > 55.8271);
+    }
+
+    function transformLat1(x, y) {
+        let ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+        ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(y * Math.PI) + 40.0 * Math.sin(y / 3.0 * Math.PI)) * 2.0 / 3.0;
+        ret += (160.0 * Math.sin(y / 12.0 * Math.PI) + 320 * Math.sin(y * Math.PI / 30.0)) * 2.0 / 3.0;
+        return ret;
+    }
+
+    function transformLng1(x, y) {
+        let ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+        ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(x * Math.PI) + 40.0 * Math.sin(x / 3.0 * Math.PI)) * 2.0 / 3.0;
+        ret += (150.0 * Math.sin(x / 12.0 * Math.PI) + 300.0 * Math.sin(x / 30.0 * Math.PI)) * 2.0 / 3.0;
+        return ret;
+    }
+
+    // GCJ-02 to WGS-84
+    function gcj02ToWgs84(lng, lat) {
+        if (outOfChina1(lng, lat)) {
+            return [lng, lat];
+        }
+        let dLat = transformLat1(lng - 105.0, lat - 35.0);
+        let dLng = transformLng1(lng - 105.0, lat - 35.0);
+        const radLat = lat / 180.0 * Math.PI;
+        let magic = Math.sin(radLat);
+        magic = 1 - 0.00669342162296594323 * magic * magic;
+        const sqrtMagic = Math.sqrt(magic);
+        dLat = (dLat * 180.0) / ((6378245.0 * (1 - 0.00669342162296594323)) / (magic * sqrtMagic) * Math.PI);
+        dLng = (dLng * 180.0) / (6378245.0 / sqrtMagic * Math.cos(radLat) * Math.PI);
+        const mgLat = lat + dLat;
+        const mgLng = lng + dLng;
+        return [lng * 2 - mgLng, lat * 2 - mgLat];
+    }
+
+
+    function transformLat2(x, y) {
+        let ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+        ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(y * Math.PI) + 40.0 * Math.sin(y / 3.0 * Math.PI)) * 2.0 / 3.0;
+        ret += (160.0 * Math.sin(y / 12.0 * Math.PI) + 320 * Math.sin(y * Math.PI / 30.0)) * 2.0 / 3.0;
+        return ret;
+    }
+
+    function transformLng2(x, y) {
+        let ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+        ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(x * Math.PI) + 40.0 * Math.sin(x / 3.0 * Math.PI)) * 2.0 / 3.0;
+        ret += (150.0 * Math.sin(x / 12.0 * Math.PI) + 300.0 * Math.sin(x / 30.0 * Math.PI)) * 2.0 / 3.0;
+        return ret;
+    }
+
+    // WGS-84 to GCJ-02
+    function wgs84ToGcj02(lng, lat) {
+        if (outOfChina1(lng, lat)) {
+            return [lng, lat];
+        }
+        let dLat = transformLat2(lng - 105.0, lat - 35.0);
+        let dLng = transformLng2(lng - 105.0, lat - 35.0);
+        const radLat = lat / 180.0 * Math.PI;
+        let magic = Math.sin(radLat);
+        magic = 1 - 0.00669342162296594323 * magic * magic;
+        const sqrtMagic = Math.sqrt(magic);
+        dLat = (dLat * 180.0) / ((6378245.0 * (1 - 0.00669342162296594323)) / (magic * sqrtMagic) * Math.PI);
+        dLng = (dLng * 180.0) / (6378245.0 / sqrtMagic * Math.cos(radLat) * Math.PI);
+        const mgLat = lat + dLat;
+        const mgLng = lng + dLng;
+        return [mgLng, mgLat];
+    }
+
 </script>
 </body>
 </html>
