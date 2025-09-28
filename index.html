@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高德地图电子围栏与轨迹绘制工具</title>
@@ -45,7 +47,7 @@
         }
         
         .sidebar {
-            width: 320px;
+            width: 500px;
             background-color: white;
             padding: 20px;
             overflow-y: auto;
@@ -266,15 +268,7 @@
         .status-polygon {
             background-color: #ff5a5f;
         }
-        
-        .status-circle {
-            background-color: #4a90e2;
-        }
-        
-        .status-marker {
-            background-color: #28a745;
-        }
-        
+
         .fence-list {
             margin-top: 10px;
             max-height: 150px;
@@ -294,18 +288,6 @@
             border-bottom: none;
         }
         
-        .fence-type {
-            font-weight: bold;
-            color: #1e5799;
-        }
-        
-        .instruction {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-            font-style: italic;
-        }
-        
         .color-preview {
             display: inline-block;
             width: 20px;
@@ -322,19 +304,33 @@
             border-radius: 4px;
             display: none;
         }
-        
+
+        #message {
+            position: absolute; /* 绝对定位 */
+            top: 5%; /* 垂直居中 */
+            left: 50%; /* 水平居中 */
+            transform: translate(-50%, -50%); /* 偏移调整 */
+            z-index: 1000; /* 确保显示在地图上方 */
+            padding: 15px 20px; /* 内边距 */
+            border-radius: 8px; /* 圆角 */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* 阴影 */
+            display: none; /* 默认隐藏 */
+            text-align: center; /* 文字居中 */
+            max-width: 80%; /* 最大宽度 */
+        }
+
         .message.info {
             background-color: #e7f3ff;
             color: #1e5799;
             border-left: 4px solid #4a90e2;
         }
-        
+
         .message.success {
             background-color: #e7f7e7;
             color: #28a745;
             border-left: 4px solid #28a745;
         }
-        
+
         .message.error {
             background-color: #fde7e7;
             color: #dc3545;
@@ -349,8 +345,6 @@
     
     <div class="container">
         <div class="sidebar">
-            <div id="message" class="message"></div>
-            
             <div class="control-panel">
                 <div class="panel-title"><i>📍</i> 电子围栏绘制</div>
                 
@@ -373,15 +367,15 @@
                 
                 <div class="input-group">
                     <label for="polygon-coords">多边形坐标 (经度,纬度，每行一个点):</label>
-                    <textarea id="polygon-coords" placeholder="例如:&#10;116.397428,39.90923&#10;116.407428,39.90923&#10;116.407428,39.91923"></textarea>
+                    <textarea id="polygon-coords">116.397428,39.90923&#10;116.407428,39.90923&#10;116.407428,39.91923</textarea>
                     <button id="render-polygon"><i>📐</i> 渲染多边形</button>
                 </div>
                 
                 <div class="input-group">
                     <label for="circle-center">圆形中心点坐标:</label>
-                    <input type="text" id="circle-center" placeholder="经度,纬度 例如: 116.397428,39.90923">
+                    <input type="text" id="circle-center" value="116.397428,39.90923">
                     <label for="circle-radius">半径(米):</label>
-                    <input type="number" id="circle-radius" placeholder="例如: 1000" min="10" value="1000">
+                    <input type="number" id="circle-radius" value="1000">
                     <button id="render-circle"><i>📏</i> 渲染圆形</button>
                 </div>
                 
@@ -403,8 +397,12 @@
                 
                 <div class="input-group">
                     <label for="import-points">导入点位数据 (经度,纬度,时间):</label>
-                    <textarea id="import-points" placeholder="例如:&#10;116.397428,39.90923,2023-10-01 10:00:00&#10;116.407428,39.90923,2023-10-01 10:05:00"></textarea>
+                    <textarea id="import-points">116.397428,39.60923,2023-10-01 10:00:00&#10;116.407428,39.70923,2023-10-01 10:05:00&#10;116.507428,39.80923,2023-10-01 10:10:00
+                    </textarea>
                     <button id="import-track"><i>📥</i> 导入轨迹</button>
+
+                    <input type="file" id="json-file" accept="application/json">
+                    <button id="import-track-json">📥 导入轨迹(JSON文件)</button>
                 </div>
                 
                 <div class="input-group">
@@ -421,6 +419,7 @@
         
         <div class="map-container">
             <div id="map"></div>
+            <div id="message" class="message"></div>
         </div>
     </div>
     
@@ -428,13 +427,12 @@
         <p>高德地图电子围栏与轨迹绘制工具 © 2023 | 基于高德地图JavaScript API实现</p>
     </div>
 
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=2e1677881b234bffdbc1d6e4d9c01076"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=d604e181c6929b3e48ad62deeddae7f4"></script>
     <script>
         // 初始化地图
         var map = new AMap.Map('map', {
             zoom: 11,
-            center: [116.397428, 39.90923],
-            mapStyle: 'amap://styles/fresh'
+            center: [116.397428, 39.90923]
         });
         
         // 存储标记点和围栏的数组
@@ -478,7 +476,9 @@
         document.getElementById('draw-track').addEventListener('click', drawTrack);
         
         document.getElementById('import-track').addEventListener('click', importTrack);
-        
+
+        document.getElementById('import-track-json').addEventListener('click', importTrackByJson);
+
         document.getElementById('export-points').addEventListener('click', exportPoints);
         
         // 颜色选择器事件
@@ -586,13 +586,7 @@
             if (currentDrawingTool) {
                 cleanupDrawing();
             }
-            
-            // 清除现有的轨迹线
-            if (currentPolyline) {
-                map.remove(currentPolyline);
-                currentPolyline = null;
-            }
-            
+
             // 监听地图点击事件设置圆心
             map.on('click', handleMapClickForCircleCenter);
             
@@ -649,9 +643,7 @@
         function renderCircleFromInput() {
             var centerText = document.getElementById('circle-center').value;
             var radius = parseFloat(document.getElementById('circle-radius').value);
-            var fenceColor = document.getElementById('fence-color').value;
-            var fenceOpacity = parseFloat(document.getElementById('fence-opacity').value);
-            
+
             // 验证输入
             if (!centerText.trim()) {
                 showMessage('请输入圆心坐标', 'error');
@@ -679,13 +671,21 @@
             
             // 创建圆心坐标对象
             var center = new AMap.LngLat(lng, lat);
-            
+            // 新建一个圆形围栏
+            const circle = new AMap.Circle({
+                center: center,
+                radius: radius,
+                strokeColor: "#3366FF",
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: "#1791fc",
+                fillOpacity: 0.35
+            });
+            // 添加到地图
+            circle.setMap(map);
+
             // 添加圆心标记
-            if (circleCenterMarker) {
-                map.remove(circleCenterMarker);
-            }
-            
-            circleCenterMarker = new AMap.Marker({
+            var circleCenterMarker = new AMap.Marker({
                 position: center,
                 map: map,
                 content: '<div class="circle-center-marker"></div>',
@@ -697,26 +697,12 @@
                 var infoWindow = new AMap.InfoWindow({
                     content: '<div class="info-window">' +
                              '<p><strong>圆心位置</strong></p>' +
-                             '<p>经度: ' + center.lng.toFixed(6) + '</p>' +
-                             '<p>纬度: ' + center.lat.toFixed(6) + '</p>' +
+                             '<p>坐标: ' + center.lng.toFixed(6) + ', ' + center.lat.toFixed(6) + '</p>' +
                              '</div>',
                     offset: new AMap.Pixel(0, -30)
                 });
                 
                 infoWindow.open(map, center);
-            });
-            
-            // 创建圆形围栏 - 修复阴影效果
-            var circle = new AMap.Circle({
-                center: center,
-                radius: radius,
-                strokeColor: "#FF33FF",
-                strokeWeight: 2,
-                fillColor: fenceColor,
-                fillOpacity: fenceOpacity,
-                strokeOpacity: 1,
-                strokeStyle: "solid",
-                map: map
             });
             
             // 添加到围栏列表
@@ -748,24 +734,25 @@
                 }
                 currentDrawingTool = null;
             }
-            
+
             // 清除多边形顶点标记
             polygonPointMarkers.forEach(function(marker) {
                 map.remove(marker);
             });
             polygonPointMarkers = [];
-            
+
             // 清除圆心标记（但不删除已完成的圆形围栏的标记）
             if (circleCenterMarker && (!currentDrawingTool || currentDrawingTool.type !== 'circle')) {
                 map.remove(circleCenterMarker);
                 circleCenterMarker = null;
             }
-            
+
             // 移除事件监听
             map.off('click', handleMapClickForPolygon);
             map.off('click', handleMapClickForCircleCenter);
             map.off('dblclick');
         }
+
         
         // 清除所有围栏
         function clearAllFences() {
@@ -894,20 +881,30 @@
             messageEl.textContent = message;
             messageEl.className = 'message ' + type;
             messageEl.style.display = 'block';
-            
+
             // 3秒后自动隐藏消息
             setTimeout(function() {
                 messageEl.style.display = 'none';
             }, 3000);
         }
-        
+
+        function formatDateTime(date) {
+            var y = date.getFullYear();
+            var M = String(date.getMonth() + 1).padStart(2, '0');
+            var d = String(date.getDate()).padStart(2, '0');
+            var h = String(date.getHours()).padStart(2, '0');
+            var m = String(date.getMinutes()).padStart(2, '0');
+            var s = String(date.getSeconds()).padStart(2, '0');
+            return y + "-" + M + "-" + d + " " + h + ":" + m + ":" + s;
+        }
+
         // 地图右键点击事件 - 添加标记
         map.on('rightclick', function(e) {
             if (!isAddingMarker) return;
             
             var lnglat = e.lnglat;
             var now = new Date();
-            var timeStr = now.toLocaleString();
+            var timeStr = formatDateTime(now);
             
             addMarker(lnglat, timeStr);
         });
@@ -917,35 +914,42 @@
             var marker = new AMap.Marker({
                 position: lnglat,
                 map: map,
-                content: '<div style="background-color: #ff5a5f; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>'
+                icon: "./images/marker-icon-blue.png",
+                offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
             });
-            
-            // 存储标记信息
-            marker.info = {
-                lng: lnglat.lng,
-                lat: lnglat.lat,
-                time: timeStr
-            };
-            
-            // 点击标记显示信息
+
+            marker.info = { lng: lnglat.lng, lat: lnglat.lat, time: timeStr };
+
             marker.on('click', function() {
+                var infoContent = document.createElement('div');
+                infoContent.className = 'info-window';
+                infoContent.innerHTML =
+                    '<p><strong>位置信息</strong></p>' +
+                    '<p>坐标: ' + lnglat.lng.toFixed(6) + ',' + lnglat.lat.toFixed(6) + '</p>' +
+                    '<p>时间: ' + timeStr + '</p>' +
+                    '<button id="delete-marker-btn" style="margin-top:8px;padding:4px 10px;background:#ff5a5f;color:white;border:none;border-radius:3px;cursor:pointer;">删除该标记</button>';
+
                 var infoWindow = new AMap.InfoWindow({
-                    content: '<div class="info-window">' +
-                             '<p><strong>位置信息</strong></p>' +
-                             '<p>经度: ' + lnglat.lng.toFixed(6) + '</p>' +
-                             '<p>纬度: ' + lnglat.lat.toFixed(6) + '</p>' +
-                             '<p>时间: ' + timeStr + '</p>' +
-                             '</div>',
+                    content: infoContent,
                     offset: new AMap.Pixel(0, -30)
                 });
-                
+
                 infoWindow.open(map, marker.getPosition());
+
+                // 删除功能
+                infoContent.querySelector('#delete-marker-btn').onclick = function() {
+                    map.remove(marker);
+                    markers = markers.filter(m => m !== marker);
+                    updatePointList();
+                    infoWindow.close();
+                    showMessage('标记点已删除', 'info');
+                };
             });
-            
+
             markers.push(marker);
             updatePointList();
         }
-        
+
         // 清除所有标记
         function clearAllMarkers() {
             markers.forEach(function(marker) {
@@ -1034,38 +1038,56 @@
                 showMessage('没有成功导入任何点位，请检查数据格式', 'error');
             }
         }
-        
+
+        // 导入轨迹，通过json文件
+        function importTrackByJson() {
+            var fileInput = document.getElementById('json-file');
+            if (!fileInput.files.length) {
+                showMessage('请选择一个 JSON 文件', 'error');
+                return;
+            }
+
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var points = JSON.parse(e.target.result);
+                    if (!Array.isArray(points)) throw new Error("格式错误");
+
+                    points.forEach(p => {
+                        var lnglat = new AMap.LngLat(p.lng, p.lat);
+                        addMarker(lnglat, p.time || new Date().toLocaleString());
+                    });
+
+                    drawTrack();
+                    showMessage('成功导入 ' + points.length + ' 个点位', 'success');
+                } catch (err) {
+                    showMessage('JSON 文件格式错误', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
         // 导出点位数据
         function exportPoints() {
             if (markers.length === 0) {
                 showMessage('没有可导出的点位数据', 'error');
                 return;
             }
-            
-            // 按时间排序
-            var sortedMarkers = markers.slice().sort(function(a, b) {
-                return new Date(a.info.time) - new Date(b.info.time);
-            });
-            
-            var csvContent = "经度,纬度,时间\n";
-            sortedMarkers.forEach(function(marker) {
-                csvContent += marker.info.lng.toFixed(6) + "," + 
-                             marker.info.lat.toFixed(6) + "," + 
-                             marker.info.time + "\n";
-            });
-            
-            // 创建下载链接
-            var encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
+
+            var sortedMarkers = markers.slice().sort((a, b) => new Date(a.info.time) - new Date(b.info.time));
+            var jsonData = sortedMarkers.map(m => m.info);
+
+            var blob = new Blob([JSON.stringify(jsonData, null, 2)], {type: "application/json"});
             var link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "点位数据_" + new Date().toISOString().slice(0,10) + ".csv");
-            document.body.appendChild(link);
+            link.href = URL.createObjectURL(blob);
+            link.download = "轨迹_" + new Date().toISOString().slice(0,10) + ".json";
             link.click();
-            document.body.removeChild(link);
-            
-            showMessage('点位数据导出成功', 'success');
+
+            showMessage('轨迹已导出为 JSON 文件', 'success');
         }
-        
+
+
         // 更新点位列表显示
         function updatePointList() {
             var pointList = document.getElementById('point-list');
