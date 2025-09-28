@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高德地图电子围栏与轨迹绘制工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1e5799 0%, #207cca 100%);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+        
+        h1 {
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+        }
+        
+        h1 i {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 320px;
+            background-color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 999;
+        }
+        
+        .control-panel {
+            margin-bottom: 25px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            color: #1e5799;
+            display: flex;
+            align-items: center;
+        }
+        
+        .panel-title i {
+            margin-right: 8px;
+            color: #207cca;
+        }
+        
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        button {
+            padding: 8px 15px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 120px;
+            justify-content: center;
+        }
+        
+        button i {
+            margin-right: 5px;
+        }
+        
+        button:hover {
+            background-color: #3a7bc8;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        button.active {
+            background-color: #1e5799;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        textarea, input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+        
+        textarea:focus, input:focus, select:focus {
+            border-color: #4a90e2;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+        
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        
+        .point-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: white;
+        }
+        
+        .point-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        
+        .point-item:hover {
+            background-color: #f0f7ff;
+        }
+        
+        .point-item:last-child {
+            border-bottom: none;
+        }
+        
+        .point-item .time {
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .info-window {
+            padding: 10px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+        
+        .info-window p {
+            margin: 5px 0;
+        }
+        
+        .info-window strong {
+            color: #1e5799;
+        }
+        
+        .footer {
+            background-color: #f0f0f0;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #ddd;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 40%;
+            }
+            
+            .map-container {
+                height: 60%;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            button {
+                min-width: 100%;
+            }
+        }
+        
+        /* 自定义标记样式 */
+        .polygon-point-marker {
+            background-color: #ff5a5f;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .circle-center-marker {
+            background-color: #4a90e2;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-polygon {
+            background-color: #ff5a5f;
+        }
+        
+        .status-circle {
+            background-color: #4a90e2;
+        }
+        
+        .status-marker {
+            background-color: #28a745;
+        }
+        
+        .fence-list {
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .fence-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .fence-item:last-child {
+            border-bottom: none;
+        }
+        
+        .fence-type {
+            font-weight: bold;
+            color: #1e5799;
+        }
+        
+        .instruction {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .color-preview {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin-left: 10px;
+            vertical-align: middle;
+            border: 1px solid #ddd;
+        }
+        
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .message.info {
+            background-color: #e7f3ff;
+            color: #1e5799;
+            border-left: 4px solid #4a90e2;
+        }
+        
+        .message.success {
+            background-color: #e7f7e7;
+            color: #28a745;
+            border-left: 4px solid #28a745;
+        }
+        
+        .message.error {
+            background-color: #fde7e7;
+            color: #dc3545;
+            border-left: 4px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><i>🗺️</i> 高德地图电子围栏与轨迹绘制工具</h1>
+    </header>
+    
+    <div class="container">
+        <div class="sidebar">
+            <div id="message" class="message"></div>
+            
+            <div class="control-panel">
+                <div class="panel-title"><i>📍</i> 电子围栏绘制</div>
+                
+                <div class="btn-group">
+                    <button id="polygon-draw" class="active"><i>🔷</i> 绘制多边形</button>
+                    <button id="circle-draw"><i>⭕</i> 绘制圆形</button>
+                    <button id="clear-fences"><i>🗑️</i> 清除围栏</button>
+                </div>
+                
+                <div class="input-group">
+                    <label for="fence-color">围栏填充颜色: <span class="color-preview" id="color-preview" style="background-color: #1791fc;"></span></label>
+                    <input type="color" id="fence-color" value="#1791fc">
+                </div>
+                
+                <div class="input-group">
+                    <label for="fence-opacity">围栏填充透明度:</label>
+                    <input type="range" id="fence-opacity" min="0.1" max="1" step="0.1" value="0.4">
+                    <span id="opacity-value">40%</span>
+                </div>
+                
+                <div class="input-group">
+                    <label for="polygon-coords">多边形坐标 (经度,纬度，每行一个点):</label>
+                    <textarea id="polygon-coords" placeholder="例如:&#10;116.397428,39.90923&#10;116.407428,39.90923&#10;116.407428,39.91923"></textarea>
+                    <button id="render-polygon"><i>📐</i> 渲染多边形</button>
+                </div>
+                
+                <div class="input-group">
+                    <label for="circle-center">圆形中心点坐标:</label>
+                    <input type="text" id="circle-center" placeholder="经度,纬度 例如: 116.397428,39.90923">
+                    <label for="circle-radius">半径(米):</label>
+                    <input type="number" id="circle-radius" placeholder="例如: 1000" min="10" value="1000">
+                    <button id="render-circle"><i>📏</i> 渲染圆形</button>
+                </div>
+                
+                <div class="fence-list" id="fence-list">
+                    <div class="fence-item">
+                        <div><span class="status-indicator status-polygon"></span>暂无围栏</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-panel">
+                <div class="panel-title"><i>📌</i> 点位标记与轨迹</div>
+                
+                <div class="btn-group">
+                    <button id="add-marker"><i>➕</i> 添加标记</button>
+                    <button id="clear-markers"><i>🗑️</i> 清除标记</button>
+                    <button id="draw-track"><i>🛣️</i> 绘制轨迹</button>
+                </div>
+                
+                <div class="input-group">
+                    <label for="import-points">导入点位数据 (经度,纬度,时间):</label>
+                    <textarea id="import-points" placeholder="例如:&#10;116.397428,39.90923,2023-10-01 10:00:00&#10;116.407428,39.90923,2023-10-01 10:05:00"></textarea>
+                    <button id="import-track"><i>📥</i> 导入轨迹</button>
+                </div>
+                
+                <div class="input-group">
+                    <button id="export-points"><i>📤</i> 导出点位数据</button>
+                </div>
+                
+                <div class="point-list" id="point-list">
+                    <div class="point-item">
+                        <div>暂无标记点</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>高德地图电子围栏与轨迹绘制工具 © 2023 | 基于高德地图JavaScript API实现</p>
+    </div>
+
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=2e1677881b234bffdbc1d6e4d9c01076"></script>
+    <script>
+        // 初始化地图
+        var map = new AMap.Map('map', {
+            zoom: 11,
+            center: [116.397428, 39.90923],
+            mapStyle: 'amap://styles/fresh'
+        });
+        
+        // 存储标记点和围栏的数组
+        var markers = [];
+        var fences = [];
+        var polygonPointMarkers = []; // 多边形顶点标记
+        var circleCenterMarker = null; // 圆形中心点标记
+        var currentDrawingTool = null;
+        var isAddingMarker = false;
+        var currentPolyline = null;
+        
+        // 绑定按钮事件
+        document.getElementById('polygon-draw').addEventListener('click', function() {
+            setActiveButton(this);
+            startPolygonDrawing();
+        });
+        
+        document.getElementById('circle-draw').addEventListener('click', function() {
+            setActiveButton(this);
+            startCircleDrawing();
+        });
+        
+        document.getElementById('clear-fences').addEventListener('click', clearAllFences);
+        
+        document.getElementById('render-polygon').addEventListener('click', renderPolygonFromInput);
+        
+        document.getElementById('render-circle').addEventListener('click', renderCircleFromInput);
+        
+        document.getElementById('add-marker').addEventListener('click', function() {
+            isAddingMarker = !isAddingMarker;
+            setActiveButton(this, isAddingMarker);
+            if (isAddingMarker) {
+                showMessage('标记模式已激活，请在地图上右键点击添加标记点', 'info');
+            } else {
+                showMessage('标记模式已关闭', 'info');
+            }
+        });
+        
+        document.getElementById('clear-markers').addEventListener('click', clearAllMarkers);
+        
+        document.getElementById('draw-track').addEventListener('click', drawTrack);
+        
+        document.getElementById('import-track').addEventListener('click', importTrack);
+        
+        document.getElementById('export-points').addEventListener('click', exportPoints);
+        
+        // 颜色选择器事件
+        document.getElementById('fence-color').addEventListener('input', function() {
+            document.getElementById('color-preview').style.backgroundColor = this.value;
+        });
+        
+        // 透明度滑块事件
+        document.getElementById('fence-opacity').addEventListener('input', function() {
+            var opacity = this.value;
+            document.getElementById('opacity-value').textContent = Math.round(opacity * 100) + '%';
+        });
+        
+        // 设置活动按钮样式
+        function setActiveButton(button, isActive) {
+            var buttons = document.querySelectorAll('.btn-group button');
+            buttons.forEach(function(btn) {
+                if (btn.id !== 'add-marker' || button.id === 'add-marker') {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            if (isActive !== false) {
+                button.classList.add('active');
+            }
+        }
+        
+        // 开始绘制多边形
+        function startPolygonDrawing() {
+            if (currentDrawingTool) {
+                cleanupDrawing();
+            }
+            
+            // 清除现有的轨迹线
+            if (currentPolyline) {
+                map.remove(currentPolyline);
+                currentPolyline = null;
+            }
+            
+            var fenceColor = document.getElementById('fence-color').value;
+            var fenceOpacity = parseFloat(document.getElementById('fence-opacity').value);
+            
+            var polygon = new AMap.Polygon({
+                strokeColor: "#FF33FF",
+                strokeWeight: 2,
+                fillColor: fenceColor,
+                fillOpacity: fenceOpacity,
+                map: map
+            });
+            
+            // 存储当前绘制的多边形
+            currentDrawingTool = {
+                type: 'polygon',
+                polygon: polygon,
+                points: []
+            };
+            
+            // 监听地图点击事件
+            map.on('click', handleMapClickForPolygon);
+            
+            showMessage('请在地图上点击绘制多边形顶点，双击结束绘制', 'info');
+        }
+        
+        // 处理多边形绘制点击事件
+        function handleMapClickForPolygon(e) {
+            if (!currentDrawingTool || currentDrawingTool.type !== 'polygon') return;
+            
+            var lnglat = e.lnglat;
+            currentDrawingTool.points.push([lnglat.lng, lnglat.lat]);
+            
+            // 更新多边形路径
+            currentDrawingTool.polygon.setPath(currentDrawingTool.points);
+            
+            // 添加顶点标记
+            addPolygonPointMarker(lnglat);
+            
+            // 双击结束绘制
+            map.on('dblclick', function() {
+                map.off('click', handleMapClickForPolygon);
+                fences.push({
+                    type: 'polygon',
+                    object: currentDrawingTool.polygon,
+                    points: currentDrawingTool.points
+                });
+                updateFenceList();
+                currentDrawingTool = null;
+                showMessage('多边形绘制完成', 'success');
+            });
+        }
+        
+        // 添加多边形顶点标记
+        function addPolygonPointMarker(lnglat) {
+            var marker = new AMap.Marker({
+                position: lnglat,
+                map: map,
+                content: '<div class="polygon-point-marker"></div>',
+                offset: new AMap.Pixel(-8, -8)
+            });
+            
+            polygonPointMarkers.push(marker);
+        }
+        
+        // 开始绘制圆形
+        function startCircleDrawing() {
+            if (currentDrawingTool) {
+                cleanupDrawing();
+            }
+            
+            // 清除现有的轨迹线
+            if (currentPolyline) {
+                map.remove(currentPolyline);
+                currentPolyline = null;
+            }
+            
+            // 监听地图点击事件设置圆心
+            map.on('click', handleMapClickForCircleCenter);
+            
+            currentDrawingTool = {
+                type: 'circle',
+                circle: null,
+                center: null
+            };
+            
+            showMessage('请点击地图设置圆心，然后在侧边栏输入半径并点击"渲染圆形"按钮', 'info');
+        }
+        
+        // 处理圆形绘制点击事件 - 设置圆心
+        function handleMapClickForCircleCenter(e) {
+            if (!currentDrawingTool || currentDrawingTool.type !== 'circle') return;
+            
+            var lnglat = e.lnglat;
+            currentDrawingTool.center = lnglat;
+            
+            // 添加圆心标记
+            if (circleCenterMarker) {
+                map.remove(circleCenterMarker);
+            }
+            
+            circleCenterMarker = new AMap.Marker({
+                position: lnglat,
+                map: map,
+                content: '<div class="circle-center-marker"></div>',
+                offset: new AMap.Pixel(-9, -9)
+            });
+            
+            // 显示圆心坐标
+            circleCenterMarker.on('click', function() {
+                var infoWindow = new AMap.InfoWindow({
+                    content: '<div class="info-window">' +
+                             '<p><strong>圆心位置</strong></p>' +
+                             '<p>经度: ' + lnglat.lng.toFixed(6) + '</p>' +
+                             '<p>纬度: ' + lnglat.lat.toFixed(6) + '</p>' +
+                             '</div>',
+                    offset: new AMap.Pixel(0, -30)
+                });
+                
+                infoWindow.open(map, lnglat);
+            });
+            
+            // 更新输入框
+            document.getElementById('circle-center').value = lnglat.lng.toFixed(6) + ',' + lnglat.lat.toFixed(6);
+            
+            map.off('click', handleMapClickForCircleCenter);
+            showMessage('圆心已设置，请在侧边栏输入半径并点击"渲染圆形"按钮', 'info');
+        }
+        
+        // 从输入框渲染圆形 - 修复圆形渲染问题
+        function renderCircleFromInput() {
+            var centerText = document.getElementById('circle-center').value;
+            var radius = parseFloat(document.getElementById('circle-radius').value);
+            var fenceColor = document.getElementById('fence-color').value;
+            var fenceOpacity = parseFloat(document.getElementById('fence-opacity').value);
+            
+            // 验证输入
+            if (!centerText.trim()) {
+                showMessage('请输入圆心坐标', 'error');
+                return;
+            }
+            
+            var parts = centerText.split(',');
+            if (parts.length < 2) {
+                showMessage('圆心坐标格式不正确，请使用"经度,纬度"格式', 'error');
+                return;
+            }
+            
+            var lng = parseFloat(parts[0]);
+            var lat = parseFloat(parts[1]);
+            
+            if (isNaN(lng) || isNaN(lat)) {
+                showMessage('圆心坐标格式不正确，请使用有效的经纬度数值', 'error');
+                return;
+            }
+            
+            if (isNaN(radius) || radius <= 0) {
+                showMessage('请输入有效的半径值', 'error');
+                return;
+            }
+            
+            // 创建圆心坐标对象
+            var center = new AMap.LngLat(lng, lat);
+            
+            // 添加圆心标记
+            if (circleCenterMarker) {
+                map.remove(circleCenterMarker);
+            }
+            
+            circleCenterMarker = new AMap.Marker({
+                position: center,
+                map: map,
+                content: '<div class="circle-center-marker"></div>',
+                offset: new AMap.Pixel(-9, -9)
+            });
+            
+            // 显示圆心坐标
+            circleCenterMarker.on('click', function() {
+                var infoWindow = new AMap.InfoWindow({
+                    content: '<div class="info-window">' +
+                             '<p><strong>圆心位置</strong></p>' +
+                             '<p>经度: ' + center.lng.toFixed(6) + '</p>' +
+                             '<p>纬度: ' + center.lat.toFixed(6) + '</p>' +
+                             '</div>',
+                    offset: new AMap.Pixel(0, -30)
+                });
+                
+                infoWindow.open(map, center);
+            });
+            
+            // 创建圆形围栏 - 修复阴影效果
+            var circle = new AMap.Circle({
+                center: center,
+                radius: radius,
+                strokeColor: "#FF33FF",
+                strokeWeight: 2,
+                fillColor: fenceColor,
+                fillOpacity: fenceOpacity,
+                strokeOpacity: 1,
+                strokeStyle: "solid",
+                map: map
+            });
+            
+            // 添加到围栏列表
+            fences.push({
+                type: 'circle',
+                object: circle,
+                center: center,
+                radius: radius
+            });
+            
+            // 如果当前正在绘制圆形，清除绘制状态
+            if (currentDrawingTool && currentDrawingTool.type === 'circle') {
+                currentDrawingTool = null;
+            }
+            
+            updateFenceList();
+            map.setFitView([circle]);
+            showMessage('圆形围栏创建成功', 'success');
+        }
+        
+        // 清理绘制状态
+        function cleanupDrawing() {
+            if (currentDrawingTool) {
+                if (currentDrawingTool.polygon) {
+                    map.remove(currentDrawingTool.polygon);
+                }
+                if (currentDrawingTool.circle) {
+                    map.remove(currentDrawingTool.circle);
+                }
+                currentDrawingTool = null;
+            }
+            
+            // 清除多边形顶点标记
+            polygonPointMarkers.forEach(function(marker) {
+                map.remove(marker);
+            });
+            polygonPointMarkers = [];
+            
+            // 清除圆心标记（但不删除已完成的圆形围栏的标记）
+            if (circleCenterMarker && (!currentDrawingTool || currentDrawingTool.type !== 'circle')) {
+                map.remove(circleCenterMarker);
+                circleCenterMarker = null;
+            }
+            
+            // 移除事件监听
+            map.off('click', handleMapClickForPolygon);
+            map.off('click', handleMapClickForCircleCenter);
+            map.off('dblclick');
+        }
+        
+        // 清除所有围栏
+        function clearAllFences() {
+            fences.forEach(function(fence) {
+                map.remove(fence.object);
+            });
+            fences = [];
+            updateFenceList();
+            
+            // 清除轨迹线
+            if (currentPolyline) {
+                map.remove(currentPolyline);
+                currentPolyline = null;
+            }
+            
+            // 清除所有标记
+            cleanupDrawing();
+            
+            showMessage('所有围栏已清除', 'info');
+        }
+        
+        // 从输入框渲染多边形
+        function renderPolygonFromInput() {
+            var coordsText = document.getElementById('polygon-coords').value;
+            if (!coordsText.trim()) {
+                showMessage('请输入多边形坐标', 'error');
+                return;
+            }
+            
+            var coords = [];
+            var lines = coordsText.split('\n');
+            
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (line) {
+                    var parts = line.split(',');
+                    if (parts.length >= 2) {
+                        var lng = parseFloat(parts[0]);
+                        var lat = parseFloat(parts[1]);
+                        if (!isNaN(lng) && !isNaN(lat)) {
+                            coords.push([lng, lat]);
+                        }
+                    }
+                }
+            }
+            
+            if (coords.length < 3) {
+                showMessage('多边形至少需要三个点', 'error');
+                return;
+            }
+            
+            var fenceColor = document.getElementById('fence-color').value;
+            var fenceOpacity = parseFloat(document.getElementById('fence-opacity').value);
+            
+            var polygon = new AMap.Polygon({
+                path: coords,
+                strokeColor: "#FF33FF",
+                strokeWeight: 2,
+                fillColor: fenceColor,
+                fillOpacity: fenceOpacity,
+                map: map
+            });
+            
+            // 添加顶点标记
+            coords.forEach(function(coord) {
+                addPolygonPointMarker(new AMap.LngLat(coord[0], coord[1]));
+            });
+            
+            fences.push({
+                type: 'polygon',
+                object: polygon,
+                points: coords
+            });
+            updateFenceList();
+            map.setFitView([polygon]);
+            showMessage('多边形围栏创建成功', 'success');
+        }
+        
+        // 更新围栏列表
+        function updateFenceList() {
+            var fenceList = document.getElementById('fence-list');
+            fenceList.innerHTML = '';
+            
+            if (fences.length === 0) {
+                fenceList.innerHTML = '<div class="fence-item"><div><span class="status-indicator status-polygon"></span>暂无围栏</div></div>';
+                return;
+            }
+            
+            fences.forEach(function(fence, index) {
+                var item = document.createElement('div');
+                item.className = 'fence-item';
+                
+                var typeText = fence.type === 'polygon' ? '多边形' : '圆形';
+                var typeClass = fence.type === 'polygon' ? 'status-polygon' : 'status-circle';
+                
+                item.innerHTML = '<div><span class="status-indicator ' + typeClass + '"></span>' + 
+                                typeText + '围栏 ' + (index + 1) + '</div>' +
+                                '<div><button class="delete-fence" data-index="' + index + '" style="background: #ff5a5f; padding: 2px 8px; font-size: 12px;">删除</button></div>';
+                
+                fenceList.appendChild(item);
+            });
+            
+            // 添加删除按钮事件
+            var deleteButtons = document.querySelectorAll('.delete-fence');
+            deleteButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var index = parseInt(this.getAttribute('data-index'));
+                    deleteFence(index);
+                });
+            });
+        }
+        
+        // 删除单个围栏
+        function deleteFence(index) {
+            if (index >= 0 && index < fences.length) {
+                map.remove(fences[index].object);
+                fences.splice(index, 1);
+                updateFenceList();
+                showMessage('围栏已删除', 'info');
+            }
+        }
+        
+        // 显示消息
+        function showMessage(message, type) {
+            var messageEl = document.getElementById('message');
+            messageEl.textContent = message;
+            messageEl.className = 'message ' + type;
+            messageEl.style.display = 'block';
+            
+            // 3秒后自动隐藏消息
+            setTimeout(function() {
+                messageEl.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 地图右键点击事件 - 添加标记
+        map.on('rightclick', function(e) {
+            if (!isAddingMarker) return;
+            
+            var lnglat = e.lnglat;
+            var now = new Date();
+            var timeStr = now.toLocaleString();
+            
+            addMarker(lnglat, timeStr);
+        });
+        
+        // 添加标记点
+        function addMarker(lnglat, timeStr) {
+            var marker = new AMap.Marker({
+                position: lnglat,
+                map: map,
+                content: '<div style="background-color: #ff5a5f; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>'
+            });
+            
+            // 存储标记信息
+            marker.info = {
+                lng: lnglat.lng,
+                lat: lnglat.lat,
+                time: timeStr
+            };
+            
+            // 点击标记显示信息
+            marker.on('click', function() {
+                var infoWindow = new AMap.InfoWindow({
+                    content: '<div class="info-window">' +
+                             '<p><strong>位置信息</strong></p>' +
+                             '<p>经度: ' + lnglat.lng.toFixed(6) + '</p>' +
+                             '<p>纬度: ' + lnglat.lat.toFixed(6) + '</p>' +
+                             '<p>时间: ' + timeStr + '</p>' +
+                             '</div>',
+                    offset: new AMap.Pixel(0, -30)
+                });
+                
+                infoWindow.open(map, marker.getPosition());
+            });
+            
+            markers.push(marker);
+            updatePointList();
+        }
+        
+        // 清除所有标记
+        function clearAllMarkers() {
+            markers.forEach(function(marker) {
+                map.remove(marker);
+            });
+            markers = [];
+            updatePointList();
+            
+            // 清除轨迹线
+            if (currentPolyline) {
+                map.remove(currentPolyline);
+                currentPolyline = null;
+            }
+            
+            showMessage('所有标记点已清除', 'info');
+        }
+        
+        // 绘制轨迹
+        function drawTrack() {
+            if (markers.length < 2) {
+                showMessage('至少需要两个标记点才能绘制轨迹', 'error');
+                return;
+            }
+            
+            // 按时间排序标记点
+            markers.sort(function(a, b) {
+                return new Date(a.info.time) - new Date(b.info.time);
+            });
+            
+            var path = markers.map(function(marker) {
+                return marker.getPosition();
+            });
+            
+            // 清除现有的轨迹线
+            if (currentPolyline) {
+                map.remove(currentPolyline);
+            }
+            
+            currentPolyline = new AMap.Polyline({
+                path: path,
+                strokeColor: "#28a745",
+                strokeWeight: 4,
+                strokeStyle: "solid",
+                map: map
+            });
+            
+            // 调整地图视野以显示整个轨迹
+            map.setFitView([currentPolyline]);
+            showMessage('轨迹绘制完成', 'success');
+        }
+        
+        // 导入轨迹
+        function importTrack() {
+            var pointsText = document.getElementById('import-points').value;
+            if (!pointsText.trim()) {
+                showMessage('请输入要导入的点位数据', 'error');
+                return;
+            }
+            
+            var lines = pointsText.split('\n');
+            var importedMarkers = [];
+            
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (line) {
+                    var parts = line.split(',');
+                    if (parts.length >= 2) {
+                        var lng = parseFloat(parts[0]);
+                        var lat = parseFloat(parts[1]);
+                        var timeStr = parts.length >= 3 ? parts[2] : new Date().toLocaleString();
+                        
+                        if (!isNaN(lng) && !isNaN(lat)) {
+                            var lnglat = new AMap.LngLat(lng, lat);
+                            addMarker(lnglat, timeStr);
+                            importedMarkers.push(markers[markers.length - 1]);
+                        }
+                    }
+                }
+            }
+            
+            if (importedMarkers.length > 0) {
+                // 自动绘制轨迹
+                drawTrack();
+                showMessage('成功导入 ' + importedMarkers.length + ' 个点位', 'success');
+            } else {
+                showMessage('没有成功导入任何点位，请检查数据格式', 'error');
+            }
+        }
+        
+        // 导出点位数据
+        function exportPoints() {
+            if (markers.length === 0) {
+                showMessage('没有可导出的点位数据', 'error');
+                return;
+            }
+            
+            // 按时间排序
+            var sortedMarkers = markers.slice().sort(function(a, b) {
+                return new Date(a.info.time) - new Date(b.info.time);
+            });
+            
+            var csvContent = "经度,纬度,时间\n";
+            sortedMarkers.forEach(function(marker) {
+                csvContent += marker.info.lng.toFixed(6) + "," + 
+                             marker.info.lat.toFixed(6) + "," + 
+                             marker.info.time + "\n";
+            });
+            
+            // 创建下载链接
+            var encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
+            var link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "点位数据_" + new Date().toISOString().slice(0,10) + ".csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showMessage('点位数据导出成功', 'success');
+        }
+        
+        // 更新点位列表显示
+        function updatePointList() {
+            var pointList = document.getElementById('point-list');
+            pointList.innerHTML = '';
+            
+            if (markers.length === 0) {
+                pointList.innerHTML = '<div class="point-item">暂无标记点</div>';
+                return;
+            }
+            
+            // 按时间排序
+            var sortedMarkers = markers.slice().sort(function(a, b) {
+                return new Date(a.info.time) - new Date(b.info.time);
+            });
+            
+            sortedMarkers.forEach(function(marker, index) {
+                var item = document.createElement('div');
+                item.className = 'point-item';
+                item.innerHTML = '<div>点位 ' + (index + 1) + ': ' + 
+                                marker.info.lng.toFixed(4) + ', ' + 
+                                marker.info.lat.toFixed(4) + '</div>' +
+                                '<div class="time">' + marker.info.time + '</div>';
+                pointList.appendChild(item);
+            });
+        }
+        
+        // 初始化
+        updatePointList();
+        updateFenceList();
+    </script>
+</body>
+</html>
