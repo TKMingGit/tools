@@ -359,8 +359,8 @@
 
                 // 转换 GCJ-02 到 WGS-84
                 const lines = json.map(p => {
-                    const gcjLng = parseFloat(p.longitude);
-                    const gcjLat = parseFloat(p.latitude);
+                    const gcjLng = parseFloat(p.lon);
+                    const gcjLat = parseFloat(p.lat);
                     const [wgsLng, wgsLat] = gcj02ToWgs84(gcjLng, gcjLat);
                     return `${wgsLng.toFixed(6)},${wgsLat.toFixed(6)}`;
                 }).filter(Boolean);
