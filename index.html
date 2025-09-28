@@ -577,7 +577,18 @@
                 content: '<div class="polygon-point-marker"></div>',
                 offset: new AMap.Pixel(-8, -8)
             });
-            
+
+            marker.on('click', function() {
+                var infoWindow = new AMap.InfoWindow({
+                    content: '<div class="info-window">' +
+                        '<p><strong>多边形顶点</strong></p>' +
+                        '<p>坐标: ' + lnglat.lng.toFixed(6) + ',' + lnglat.lat.toFixed(6) + '</p>' +
+                        '</div>',
+                    offset: new AMap.Pixel(0, -30)
+                });
+                infoWindow.open(map, lnglat);
+            });
+
             polygonPointMarkers.push(marker);
         }
         
