@@ -721,7 +721,8 @@
                 type: 'circle',
                 object: circle,
                 center: center,
-                radius: radius
+                radius: radius,
+                circleCenterMarker: circleCenterMarker
             });
             
             // 如果当前正在绘制圆形，清除绘制状态
@@ -768,11 +769,40 @@
         // 清除所有围栏
         function clearAllFences() {
             fences.forEach(function(fence) {
+                // 从地图移除围栏图形
                 map.remove(fence.object);
+
+                // 根据围栏类型清除对应的标记点
+                if (fence.type === 'polygon') {
+                    // 移除多边形顶点标记
+                    polygonPointMarkers.forEach(function(marker) {
+                        map.remove(marker);
+                    });
+                    polygonPointMarkers = [];
+                }
+                else if (fence.type === 'circle') {
+                    // 移除圆形中心点标记
+                    if (fence.circleCenterMarker) {
+                        map.remove(fence.circleCenterMarker);
+                    }
+                }
             });
+
             fences = [];
             updateFenceList();
-            
+
+            // 清除多边形顶点标记
+            polygonPointMarkers.forEach(function(marker) {
+                map.remove(marker);
+            });
+            polygonPointMarkers = [];
+
+            // 清除圆心标记
+            if (circleCenterMarker) {
+                map.remove(circleCenterMarker);
+                circleCenterMarker = null;
+            }
+
             // 清除轨迹线
             if (currentPolyline) {
                 map.remove(currentPolyline);
@@ -879,7 +909,27 @@
         // 删除单个围栏
         function deleteFence(index) {
             if (index >= 0 && index < fences.length) {
-                map.remove(fences[index].object);
+                var fence = fences[index];
+
+                // 从地图移除围栏图形
+                map.remove(fence.object);
+
+                // 根据围栏类型清除对应的标记点
+                if (fence.type === 'polygon') {
+                    // 移除多边形顶点标记
+                    polygonPointMarkers.forEach(function(marker) {
+                        map.remove(marker);
+                    });
+                    polygonPointMarkers = [];
+                }
+                else if (fence.type === 'circle') {
+                    // 移除圆形中心点标记
+                    if (fence.circleCenterMarker) {
+                        map.remove(fence.circleCenterMarker);
+                    }
+                }
+
+                // 从围栏数组中移除
                 fences.splice(index, 1);
                 updateFenceList();
                 showMessage('围栏已删除', 'info');
