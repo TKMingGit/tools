@@ -461,15 +461,7 @@
         
         document.getElementById('render-circle').addEventListener('click', renderCircleFromInput);
         
-        document.getElementById('add-marker').addEventListener('click', function() {
-            isAddingMarker = !isAddingMarker;
-            setActiveButton(this, isAddingMarker);
-            if (isAddingMarker) {
-                showMessage('标记模式已激活，请在地图上右键点击添加标记点', 'info');
-            } else {
-                showMessage('标记模式已关闭', 'info');
-            }
-        });
+        document.getElementById('add-marker').addEventListener('click', markerCtl);
         
         document.getElementById('clear-markers').addEventListener('click', clearAllMarkers);
         
@@ -535,13 +527,67 @@
                 polygon: polygon,
                 points: []
             };
-            
+
+            let lastRightClickTime = 0;
+            map.on("rightclick", function(e) {
+                let now = Date.now();
+                if (now - lastRightClickTime < 1000) {
+                    // 解绑事件
+                    map.off('click', handleMapClickForPolygon);
+                    map.off('rightclick');
+
+                    console.log("双击事件触发：", e);
+                    console.log("经度：" + e.lnglat.getLng() + "，纬度：" + e.lnglat.getLat());
+
+                    if (!currentDrawingTool || currentDrawingTool.type !== 'polygon') return;
+
+                    // 添加到围栏数组
+                    fences.push({
+                        type: 'polygon',
+                        object: currentDrawingTool.polygon,
+                        points: currentDrawingTool.points
+                    });
+
+                    updateFenceList();
+
+                    currentDrawingTool = null;
+
+                    showMessage('多边形绘制完成', 'success');
+                }
+                lastRightClickTime = now;
+            });
+
             // 监听地图点击事件
+            map.on("dblclick", function (e) {
+                // 解绑事件
+                map.off('click', handleMapClickForPolygon);
+                map.off('dblclick', finishPolygonDrawing);
+
+                console.log("双击事件触发：", e);
+                console.log("经度：" + e.lnglat.getLng() + "，纬度：" + e.lnglat.getLat());
+
+                if (!currentDrawingTool || currentDrawingTool.type !== 'polygon') return;
+
+                // 添加到围栏数组
+                fences.push({
+                    type: 'polygon',
+                    object: currentDrawingTool.polygon,
+                    points: currentDrawingTool.points
+                });
+
+                updateFenceList();
+
+                currentDrawingTool = null;
+
+                showMessage('多边形绘制完成', 'success');
+            });
+
+
             map.on('click', handleMapClickForPolygon);
             
             showMessage('请在地图上点击绘制多边形顶点，双击结束绘制', 'info');
         }
-        
+
         // 处理多边形绘制点击事件
         function handleMapClickForPolygon(e) {
             if (!currentDrawingTool || currentDrawingTool.type !== 'polygon') return;
@@ -554,19 +600,6 @@
             
             // 添加顶点标记
             addPolygonPointMarker(lnglat);
-            
-            // 双击结束绘制
-            map.on('dblclick', function() {
-                map.off('click', handleMapClickForPolygon);
-                fences.push({
-                    type: 'polygon',
-                    object: currentDrawingTool.polygon,
-                    points: currentDrawingTool.points
-                });
-                updateFenceList();
-                currentDrawingTool = null;
-                showMessage('多边形绘制完成', 'success');
-            });
         }
         
         // 添加多边形顶点标记
@@ -762,10 +795,9 @@
             // 移除事件监听
             map.off('click', handleMapClickForPolygon);
             map.off('click', handleMapClickForCircleCenter);
-            map.off('dblclick');
+            map.off('rightclick');
         }
 
-        
         // 清除所有围栏
         function clearAllFences() {
             fences.forEach(function(fence) {
@@ -959,17 +991,28 @@
             return y + "-" + M + "-" + d + " " + h + ":" + m + ":" + s;
         }
 
-        // 地图右键点击事件 - 添加标记
-        map.on('rightclick', function(e) {
-            if (!isAddingMarker) return;
-            
-            var lnglat = e.lnglat;
-            var now = new Date();
-            var timeStr = formatDateTime(now);
-            
-            addMarker(lnglat, timeStr);
-        });
-        
+        function markerCtl() {
+            isAddingMarker = !isAddingMarker;
+            setActiveButton(document.getElementById('add-marker'), isAddingMarker);
+            if (isAddingMarker) {
+                showMessage('右键点击地图添加标记点', 'info');
+                // 地图右键点击事件 - 添加标记
+                map.on('rightclick', function(e) {
+                    if (!isAddingMarker) return;
+
+                    var lnglat = e.lnglat;
+                    var now = new Date();
+                    var timeStr = formatDateTime(now);
+
+                    addMarker(lnglat, timeStr);
+                });
+            } else {
+                showMessage('标记点添加已取消', 'info');
+                // 地图右键点击事件 - 添加标记
+                map.off('rightclick');
+            }
+        }
+
         // 添加标记点
         function addMarker(lnglat, timeStr) {
             var marker = new AMap.Marker({
