@@ -192,6 +192,7 @@
         }
         
         .info-window {
+            background-color: white;
             padding: 10px;
             font-size: 14px;
             min-width: 200px;
@@ -336,6 +337,53 @@
             color: #dc3545;
             border-left: 4px solid #dc3545;
         }
+
+        .custom-info-window {
+            min-width: 200px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-size: 13px;
+            overflow: hidden;
+        }
+        .custom-info-window .ciw-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f7f7f7;
+            padding: 5px 10px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+        .custom-info-window .ciw-close {
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+        }
+        .custom-info-window .ciw-close:hover {
+            color: #ff5a5f;
+        }
+        .custom-info-window .ciw-body {
+            padding: 8px 10px;
+        }
+        .custom-info-window .ciw-footer {
+            padding: 6px 10px;
+            text-align: right;
+            border-top: 1px solid #eee;
+        }
+        .custom-info-window .delete-marker-btn {
+            padding: 4px 10px;
+            background: #ff5a5f;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .custom-info-window .delete-marker-btn:hover {
+            background: #e04848;
+        }
+
     </style>
 </head>
 <body>
@@ -589,15 +637,32 @@
             });
 
             marker.on('click', function() {
-                var infoWindow = new AMap.InfoWindow({
-                    content: '<div class="info-window">' +
-                        '<p><strong>多边形顶点</strong></p>' +
-                        '<p>坐标: ' + lnglat.lng.toFixed(6) + ',' + lnglat.lat.toFixed(6) + '</p>' +
-                        '</div>',
-                    offset: new AMap.Pixel(0, -30),
-                    closeWhenClickMap: false
+                var infoDom = document.createElement('div');
+                infoDom.className = 'custom-info-window';
+                infoDom.innerHTML = `
+                    <div class="ciw-header">
+                        <span><strong>多边形顶点</strong></span>
+                        <span class="ciw-close">×</span>
+                    </div>
+                    <div class="ciw-body">
+                        <p>坐标: ${lnglat.lng.toFixed(6)}, ${lnglat.lat.toFixed(6)}</p>
+                    </div>
+                `;
+
+                // 用 Marker 显示“信息窗”
+                var infoMarker = new AMap.Marker({
+                    position: marker.getPosition(),
+                    offset: new AMap.Pixel(-99, -80), // 调整到 marker 上方
+                    content: infoDom,
+                    map: map,
+                    clickable: true
                 });
-                infoWindow.open(map, lnglat);
+
+                // 绑定关闭按钮事件
+                infoDom.querySelector('.ciw-close').onclick = function() {
+                    map.remove(infoMarker);
+                };
+
             });
 
             polygonPointMarkers.push(marker);
@@ -637,22 +702,36 @@
                 position: lnglat,
                 map: map,
                 content: '<div class="circle-center-marker"></div>',
-                offset: new AMap.Pixel(-9, -9)
+                offset: new AMap.Pixel(-4, -4)
             });
 
             // 显示圆心坐标
             circleCenterMarker.on('click', function() {
-                var infoWindow = new AMap.InfoWindow({
-                    content: '<div class="info-window">' +
-                             '<p><strong>圆心位置</strong></p>' +
-                             '<p>坐标: ' + lnglat.lng.toFixed(6) + ', ' + lnglat.lat.toFixed(6) + '</p>' +
-                             '<p>半径: ' +  + '</p>' +
-                             '</div>',
-                    offset: new AMap.Pixel(0, -30),
-                    closeWhenClickMap: false
+                var infoDom = document.createElement('div');
+                infoDom.className = 'custom-info-window';
+                infoDom.innerHTML = `
+                    <div class="ciw-header">
+                        <span><strong>圆心位置</strong></span>
+                        <span class="ciw-close">×</span>
+                    </div>
+                    <div class="ciw-body">
+                        <p>坐标: ${lnglat.lng.toFixed(6)}, ${lnglat.lat.toFixed(6)}</p>
+                    </div>
+                `;
+
+                // 用 Marker 显示“信息窗”
+                var infoMarker = new AMap.Marker({
+                    position: circleCenterMarker.getPosition(),
+                    offset: new AMap.Pixel(-99, -80), // 调整到 marker 上方
+                    content: infoDom,
+                    map: map,
+                    clickable: true
                 });
-                
-                infoWindow.open(map, lnglat);
+
+                // 绑定关闭按钮事件
+                infoDom.querySelector('.ciw-close').onclick = function() {
+                    map.remove(infoMarker);
+                };
             });
             
             // 更新输入框
@@ -717,17 +796,32 @@
             
             // 显示圆心坐标
             circleCenterMarker.on('click', function() {
-                var infoWindow = new AMap.InfoWindow({
-                    content: '<div class="info-window">' +
-                             '<p><strong>圆心位置</strong></p>' +
-                             '<p>坐标: ' + center.lng.toFixed(6) + ', ' + center.lat.toFixed(6) + '</p>' +
-                             '<p>半径: ' + radius + '米</p>' +
-                             '</div>',
-                    offset: new AMap.Pixel(0, -30),
-                    closeWhenClickMap: false
+                var infoDom = document.createElement('div');
+                infoDom.className = 'custom-info-window';
+                infoDom.innerHTML = `
+                    <div class="ciw-header">
+                        <span><strong>圆心位置</strong></span>
+                        <span class="ciw-close">×</span>
+                    </div>
+                    <div class="ciw-body">
+                        <p>坐标: ${center.lng.toFixed(6)}, ${center.lat.toFixed(6)}</p>
+                        <p>半径: ${radius} 米</p>
+                    </div>
+                `;
+
+                // 用 Marker 显示“信息窗”
+                var infoMarker = new AMap.Marker({
+                    position: circleCenterMarker.getPosition(),
+                    offset: new AMap.Pixel(-99, -100), // 调整到 marker 上方
+                    content: infoDom,
+                    map: map,
+                    clickable: true
                 });
-                
-                infoWindow.open(map, center);
+
+                // 绑定关闭按钮事件
+                infoDom.querySelector('.ciw-close').onclick = function() {
+                    map.remove(infoMarker);
+                };
             });
             
             // 添加到围栏列表
@@ -1004,6 +1098,7 @@
         }
 
         // 添加标记点
+        // 添加标记点（自定义 InfoWindow 替代方案）
         function addMarker(lnglat, timeStr) {
             var marker = new AMap.Marker({
                 position: lnglat,
@@ -1014,29 +1109,45 @@
 
             marker.info = { lng: lnglat.lng, lat: lnglat.lat, time: timeStr };
 
+            // 点击 marker 弹出自定义“InfoWindow”
             marker.on('click', function() {
-                var infoContent = document.createElement('div');
-                infoContent.className = 'info-window';
-                infoContent.innerHTML =
-                    '<p><strong>位置信息</strong></p>' +
-                    '<p>坐标: ' + lnglat.lng.toFixed(6) + ',' + lnglat.lat.toFixed(6) + '</p>' +
-                    '<p>时间: ' + timeStr + '</p>' +
-                    '<button id="delete-marker-btn" style="margin-top:8px;padding:4px 10px;background:#ff5a5f;color:white;border:none;border-radius:3px;cursor:pointer;">删除该标记</button>';
+                // 创建 DOM 容器
+                var infoDom = document.createElement('div');
+                infoDom.className = 'custom-info-window';
+                infoDom.innerHTML = `
+                    <div class="ciw-header">
+                        <span><strong>位置信息</strong></span>
+                        <span class="ciw-close">×</span>
+                    </div>
+                    <div class="ciw-body">
+                        <p>坐标: ${lnglat.lng.toFixed(6)}, ${lnglat.lat.toFixed(6)}</p>
+                        <p>时间: ${timeStr}</p>
+                    </div>
+                    <div class="ciw-footer">
+                        <button class="delete-marker-btn">删除该标记</button>
+                    </div>
+                `;
 
-                var infoWindow = new AMap.InfoWindow({
-                    content: infoContent,
-                    offset: new AMap.Pixel(0, -30),
-                    closeWhenClickMap: false
+                // 用 Marker 显示“信息窗”
+                var infoMarker = new AMap.Marker({
+                    position: marker.getPosition(),
+                    offset: new AMap.Pixel(-99, -161), // 调整到 marker 上方
+                    content: infoDom,
+                    map: map,
+                    clickable: true
                 });
 
-                infoWindow.open(map, marker.getPosition());
+                // 绑定关闭按钮事件
+                infoDom.querySelector('.ciw-close').onclick = function() {
+                    map.remove(infoMarker);
+                };
 
-                // 删除功能
-                infoContent.querySelector('#delete-marker-btn').onclick = function() {
+                // 删除标记按钮
+                infoDom.querySelector('.delete-marker-btn').onclick = function() {
                     map.remove(marker);
+                    map.remove(infoMarker);
                     markers = markers.filter(m => m !== marker);
                     updatePointList();
-                    infoWindow.close();
                     showMessage('标记点已删除', 'info');
                 };
             });
