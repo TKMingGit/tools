@@ -750,6 +750,8 @@
         function renderCircleFromInput() {
             var centerText = document.getElementById('circle-center').value;
             var radius = parseFloat(document.getElementById('circle-radius').value);
+            var fenceColor = document.getElementById('fence-color').value;
+            var fenceOpacity = parseFloat(document.getElementById('fence-opacity').value);
 
             // 验证输入
             if (!centerText.trim()) {
@@ -775,7 +777,7 @@
                 showMessage('请输入有效的半径值', 'error');
                 return;
             }
-            
+
             // 创建圆心坐标对象
             var center = new AMap.LngLat(lng, lat);
             // 新建一个圆形围栏
@@ -785,14 +787,14 @@
                 strokeColor: "#3366FF",
                 strokeOpacity: 0.8,
                 strokeWeight: 2,
-                fillColor: "#1791fc",
-                fillOpacity: 0.35
+                fillColor: fenceColor,
+                fillOpacity: fenceOpacity
             });
             // 添加到地图
             circle.setMap(map);
 
             // 添加圆心标记
-            var circleCenterMarker = new AMap.Marker({
+            var circleCenterMarkerCus = new AMap.Marker({
                 position: center,
                 map: map,
                 content: '<div class="circle-center-marker"></div>',
@@ -800,7 +802,7 @@
             });
             
             // 显示圆心坐标
-            circleCenterMarker.on('click', function() {
+            circleCenterMarkerCus.on('click', function() {
                 var infoDom = document.createElement('div');
                 infoDom.className = 'custom-info-window';
                 infoDom.innerHTML = `
@@ -816,7 +818,7 @@
 
                 // 用 Marker 显示“信息窗”
                 var infoMarker = new AMap.Marker({
-                    position: circleCenterMarker.getPosition(),
+                    position: circleCenterMarkerCus.getPosition(),
                     offset: new AMap.Pixel(-99, -100), // 调整到 marker 上方
                     content: infoDom,
                     map: map,
@@ -835,12 +837,17 @@
                 object: circle,
                 center: center,
                 radius: radius,
-                circleCenterMarker: circleCenterMarker
+                circleCenterMarker: circleCenterMarkerCus
             });
             
             // 如果当前正在绘制圆形，清除绘制状态
             if (currentDrawingTool && currentDrawingTool.type === 'circle') {
                 currentDrawingTool = null;
+            }
+
+            // 添加圆心标记
+            if (circleCenterMarker) {
+                map.remove(circleCenterMarker);
             }
             
             updateFenceList();
