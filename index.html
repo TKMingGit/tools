@@ -484,7 +484,6 @@
         // 存储标记点和围栏的数组
         var markers = [];
         var fences = [];
-        var polygonPointMarkers = []; // 多边形顶点标记
         var circleCenterMarker = null; // 圆形中心点标记
         var currentDrawingTool = null;
         var currentPolyline = null;
@@ -540,10 +539,10 @@
                 button.classList.add('active');
             }
         }
-        
+
         // 开始绘制多边形
         function startPolygonDrawing() {
-            // 如果正在添加标记，先停掉
+            // 停掉右键加标记
             if (isAddingMarker) {
                 isAddingMarker = false;
                 map.off('rightclick', handleRightClickForMarker);
@@ -552,16 +551,15 @@
             if (currentDrawingTool) {
                 cleanupDrawing();
             }
-            
-            // 清除现有的轨迹线
+
             if (currentPolyline) {
                 map.remove(currentPolyline);
                 currentPolyline = null;
             }
-            
+
             var fenceColor = document.getElementById('fence-color').value;
             var fenceOpacity = parseFloat(document.getElementById('fence-opacity').value);
-            
+
             var polygon = new AMap.Polygon({
                 strokeColor: "#FF33FF",
                 strokeWeight: 2,
@@ -569,65 +567,62 @@
                 fillOpacity: fenceOpacity,
                 map: map
             });
-            
-            // 存储当前绘制的多边形
+
+            // ✅ 把点标记数组放进 currentDrawingTool
             currentDrawingTool = {
                 type: 'polygon',
                 polygon: polygon,
-                points: []
+                points: [],
+                pointMarkers: []
             };
 
-            // 1s内双击右键结束多边形绘制
             let lastRightClickTime = 0;
+
+            // 右键双击完成绘制
             map.on("rightclick", function(e) {
                 let now = Date.now();
                 if (now - lastRightClickTime < 1000) {
-                    // 解绑事件
                     map.off('click', handleMapClickForPolygon);
                     map.off('rightclick');
 
-                    console.log("双击事件触发：", e);
-                    console.log("经度：" + e.lnglat.getLng() + "，纬度：" + e.lnglat.getLat());
-
                     if (!currentDrawingTool || currentDrawingTool.type !== 'polygon') return;
+                    if (currentDrawingTool.points.length < 3) {
+                        showMessage('多边形至少需要三个点', 'error');
+                        return;
+                    }
 
-                    // 添加到围栏数组
                     fences.push({
                         type: 'polygon',
                         object: currentDrawingTool.polygon,
-                        points: currentDrawingTool.points
+                        points: currentDrawingTool.points.slice(),
+                        polygonPointMarkers: currentDrawingTool.pointMarkers.slice()
                     });
 
                     updateFenceList();
-
                     currentDrawingTool = null;
-
                     showMessage('多边形绘制完成', 'success');
                 }
                 lastRightClickTime = now;
             });
 
+            // 点击加点
             map.on('click', handleMapClickForPolygon);
-            
-            showMessage('请在地图上点击绘制多边形顶点，双击结束绘制', 'info');
+            showMessage('请在地图上点击绘制多边形顶点，双击右键结束绘制', 'info');
         }
 
         // 处理多边形绘制点击事件
         function handleMapClickForPolygon(e) {
             if (!currentDrawingTool || currentDrawingTool.type !== 'polygon') return;
-            
+
             var lnglat = e.lnglat;
             currentDrawingTool.points.push([lnglat.lng, lnglat.lat]);
-            
-            // 更新多边形路径
             currentDrawingTool.polygon.setPath(currentDrawingTool.points);
-            
-            // 添加顶点标记
-            addPolygonPointMarker(lnglat);
+
+            addPolygonPointMarker(lnglat, currentDrawingTool.pointMarkers);
         }
         
         // 添加多边形顶点标记
-        function addPolygonPointMarker(lnglat) {
+        function addPolygonPointMarker(lnglat, polygonPointMarkersCus) {
             var marker = new AMap.Marker({
                 position: lnglat,
                 map: map,
@@ -664,7 +659,7 @@
 
             });
 
-            polygonPointMarkers.push(marker);
+            polygonPointMarkersCus.push(marker);
         }
         
         // 开始绘制圆形
@@ -865,6 +860,7 @@
             if (currentDrawingTool) {
                 if (currentDrawingTool.polygon) {
                     map.remove(currentDrawingTool.polygon);
+                    currentDrawingTool.points = [];
                 }
                 if (currentDrawingTool.circle) {
                     map.remove(currentDrawingTool.circle);
@@ -872,14 +868,8 @@
                 currentDrawingTool = null;
             }
 
-            // 清除多边形顶点标记
-            polygonPointMarkers.forEach(function(marker) {
-                map.remove(marker);
-            });
-            polygonPointMarkers = [];
-
             // 清除圆心标记（但不删除已完成的圆形围栏的标记）
-            if (circleCenterMarker && (!currentDrawingTool || currentDrawingTool.type !== 'circle')) {
+            if (circleCenterMarker) {
                 map.remove(circleCenterMarker);
                 circleCenterMarker = null;
             }
@@ -894,10 +884,9 @@
                 // 根据围栏类型清除对应的标记点
                 if (fence.type === 'polygon') {
                     // 移除多边形顶点标记
-                    polygonPointMarkers.forEach(function(marker) {
+                    fence.polygonPointMarkers.forEach(function(marker) {
                         map.remove(marker);
                     });
-                    polygonPointMarkers = [];
                 }
                 else if (fence.type === 'circle') {
                     // 移除圆形中心点标记
@@ -907,12 +896,6 @@
 
             fences = [];
             updateFenceList();
-
-            // 清除多边形顶点标记
-            polygonPointMarkers.forEach(function(marker) {
-                map.remove(marker);
-            });
-            polygonPointMarkers = [];
 
             // 清除圆心标记
             if (circleCenterMarker) {
@@ -973,16 +956,19 @@
                 fillOpacity: fenceOpacity,
                 map: map
             });
-            
+
+            let polygonPointMarkersCus = [];
             // 添加顶点标记
             coords.forEach(function(coord) {
-                addPolygonPointMarker(new AMap.LngLat(coord[0], coord[1]));
+                addPolygonPointMarker(new AMap.LngLat(coord[0], coord[1]), polygonPointMarkersCus);
             });
             
             fences.push({
                 type: 'polygon',
                 object: polygon,
-                points: coords
+                points: coords,
+                // 复制当前顶点标记数组
+                polygonPointMarkers: polygonPointMarkersCus.slice()
             });
             updateFenceList();
             map.setFitView([polygon]);
@@ -1025,18 +1011,6 @@
         
         // 删除单个围栏
         function deleteFence(index) {
-            // 清除多边形顶点标记
-            polygonPointMarkers.forEach(function(marker) {
-                map.remove(marker);
-            });
-            polygonPointMarkers = [];
-
-            // 清除圆心标记（但不删除已完成的圆形围栏的标记）
-            if (circleCenterMarker && (!currentDrawingTool || currentDrawingTool.type !== 'circle')) {
-                map.remove(circleCenterMarker);
-                circleCenterMarker = null;
-            }
-
             if (index >= 0 && index < fences.length) {
                 var fence = fences[index];
 
@@ -1046,10 +1020,9 @@
                 // 根据围栏类型清除对应的标记点
                 if (fence.type === 'polygon') {
                     // 移除多边形顶点标记
-                    polygonPointMarkers.forEach(function(marker) {
+                    fence.polygonPointMarkers.forEach(function(marker) {
                         map.remove(marker);
                     });
-                    polygonPointMarkers = [];
                 }
                 else if (fence.type === 'circle') {
                     // 移除圆形中心点标记
