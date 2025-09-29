@@ -630,7 +630,13 @@
                 offset: new AMap.Pixel(-8, -8)
             });
 
+            marker.infoMarker = null;
             marker.on('click', function() {
+                if (marker.infoMarker) {
+                    // 已经有 infoWindow，就不重复创建
+                    return;
+                }
+
                 var infoDom = document.createElement('div');
                 infoDom.className = 'custom-info-window';
                 infoDom.innerHTML = `
@@ -652,9 +658,12 @@
                     clickable: true
                 });
 
+                marker.infoMarker = infoMarker;
+
                 // 绑定关闭按钮事件
                 infoDom.querySelector('.ciw-close').onclick = function() {
                     map.remove(infoMarker);
+                    marker.infoMarker = null;
                 };
 
             });
@@ -704,9 +713,15 @@
                 content: '<div class="circle-center-marker"></div>',
                 offset: new AMap.Pixel(-4, -4)
             });
+            circleCenterMarker.infoMarker = null;
 
             // 显示圆心坐标
             circleCenterMarker.on('click', function() {
+                if (circleCenterMarker.infoMarker) {
+                    // 已经有 infoWindow，就不重复创建
+                    return;
+                }
+
                 var infoDom = document.createElement('div');
                 infoDom.className = 'custom-info-window';
                 infoDom.innerHTML = `
@@ -728,10 +743,14 @@
                     clickable: true
                 });
 
+                circleCenterMarker.infoMarker = infoMarker;
+
                 // 绑定关闭按钮事件
                 infoDom.querySelector('.ciw-close').onclick = function() {
                     map.remove(infoMarker);
+                    circleCenterMarker.infoMarker = null;
                 };
+
             });
             
             // 更新输入框
@@ -795,9 +814,14 @@
                 content: '<div class="circle-center-marker"></div>',
                 offset: new AMap.Pixel(-9, -9)
             });
-            
+            circleCenterMarkerCus.infoMarker = null;
             // 显示圆心坐标
             circleCenterMarkerCus.on('click', function() {
+                if (circleCenterMarkerCus.infoMarker) {
+                    // 已经有 infoWindow，就不重复创建
+                    return;
+                }
+
                 var infoDom = document.createElement('div');
                 infoDom.className = 'custom-info-window';
                 infoDom.innerHTML = `
@@ -819,10 +843,12 @@
                     map: map,
                     clickable: true
                 });
+                circleCenterMarkerCus.infoMarker = infoMarker;
 
                 // 绑定关闭按钮事件
                 infoDom.querySelector('.ciw-close').onclick = function() {
                     map.remove(infoMarker);
+                    circleCenterMarkerCus.infoMarker = null;
                 };
             });
             
@@ -885,10 +911,17 @@
                 if (fence.type === 'polygon') {
                     // 移除多边形顶点标记
                     fence.polygonPointMarkers.forEach(function(marker) {
+                        if (marker.infoMarker) {
+                            map.remove(marker.infoMarker);
+                        }
+
                         map.remove(marker);
                     });
                 }
                 else if (fence.type === 'circle') {
+                    if (fence.circleCenterMarker.infoMarker) {
+                        map.remove(fence.circleCenterMarker.infoMarker);
+                    }
                     // 移除圆形中心点标记
                     map.remove(fence.circleCenterMarker);
                 }
@@ -1021,10 +1054,16 @@
                 if (fence.type === 'polygon') {
                     // 移除多边形顶点标记
                     fence.polygonPointMarkers.forEach(function(marker) {
+                        if (marker.infoMarker) {
+                            map.remove(marker.infoMarker);
+                        }
                         map.remove(marker);
                     });
                 }
                 else if (fence.type === 'circle') {
+                    if (fence.circleCenterMarker.infoMarker) {
+                        map.remove(fence.circleCenterMarker.infoMarker);
+                    }
                     // 移除圆形中心点标记
                     map.remove(fence.circleCenterMarker);
                 }
@@ -1095,8 +1134,15 @@
 
             marker.info = { lng: lnglat.lng, lat: lnglat.lat, time: timeStr };
 
+            marker.infoMarker = null; // 先预留
+
             // 点击 marker 弹出自定义“InfoWindow”
             marker.on('click', function() {
+                if (marker.infoMarker) {
+                    // 已经有 infoWindow，就不重复创建
+                    return;
+                }
+
                 // 创建 DOM 容器
                 var infoDom = document.createElement('div');
                 infoDom.className = 'custom-info-window';
@@ -1122,15 +1168,20 @@
                     clickable: true
                 });
 
+                marker.infoMarker = infoMarker;
+
                 // 绑定关闭按钮事件
                 infoDom.querySelector('.ciw-close').onclick = function() {
                     map.remove(infoMarker);
+                    marker.infoMarker = null;
                 };
 
                 // 删除标记按钮
                 infoDom.querySelector('.ciw-delete').onclick = function() {
+                    if (marker.infoMarker) {
+                        map.remove(marker.infoMarker);
+                    }
                     map.remove(marker);
-                    map.remove(infoMarker);
                     markers = markers.filter(m => m !== marker);
                     updatePointList();
                     showMessage('标记点已删除', 'info');
@@ -1145,6 +1196,10 @@
         // 清除所有标记
         function clearAllMarkers() {
             markers.forEach(function(marker) {
+                if (marker.infoMarker) {
+                    map.remove(marker.infoMarker);
+                }
+
                 map.remove(marker);
             });
             markers = [];
