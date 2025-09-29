@@ -436,7 +436,7 @@
                 <div class="panel-title"><i>📌</i> 点位标记与轨迹</div>
                 
                 <div class="btn-group">
-                    <button id="add-marker"><i>➕</i> 添加标记</button>
+                    <button id="add-marker" ><i>➕</i> 添加标记</button>
                     <button id="clear-markers"><i>🗑️</i> 清除标记</button>
                     <button id="draw-track"><i>🛣️</i> 绘制轨迹</button>
                 </div>
@@ -487,7 +487,6 @@
         var polygonPointMarkers = []; // 多边形顶点标记
         var circleCenterMarker = null; // 圆形中心点标记
         var currentDrawingTool = null;
-        var isAddingMarker = false;
         var currentPolyline = null;
         
         // 绑定按钮事件
@@ -540,14 +539,16 @@
             if (isActive !== false) {
                 button.classList.add('active');
             }
-
-            if (isAddingMarker === true) {
-                isAddingMarker = false;
-            }
         }
         
         // 开始绘制多边形
         function startPolygonDrawing() {
+            // 如果正在添加标记，先停掉
+            if (isAddingMarker) {
+                isAddingMarker = false;
+                map.off('rightclick', handleRightClickForMarker);
+            }
+
             if (currentDrawingTool) {
                 cleanupDrawing();
             }
@@ -668,6 +669,12 @@
         
         // 开始绘制圆形
         function startCircleDrawing() {
+            // 如果正在添加标记，先停掉
+            if (isAddingMarker) {
+                isAddingMarker = false;
+                map.off('rightclick', handleRightClickForMarker);
+            }
+
             if (currentDrawingTool) {
                 cleanupDrawing();
             }
@@ -1073,29 +1080,30 @@
             return y + "-" + M + "-" + d + " " + h + ":" + m + ":" + s;
         }
 
+        var isAddingMarker = false;
+
         // 右键添加标记点控制器
         function markerCtl() {
-            isAddingMarker = !isAddingMarker;
+            isAddingMarker = !isAddingMarker; // ✅ 改成开关
             if (isAddingMarker) {
                 showMessage('右键点击地图添加标记点，再次点击该按钮取消右键标记', 'info');
-                // 地图右键点击事件 - 添加标记
-                map.on('rightclick', function(e) {
-                    if (!isAddingMarker) return;
-
-                    var lnglat = e.lnglat;
-                    var now = new Date();
-                    var timeStr = formatDateTime(now);
-
-                    addMarker(lnglat, timeStr);
-                });
+                // 绑定一次右键事件
+                map.on('rightclick', handleRightClickForMarker);
             } else {
                 showMessage('标记点添加已取消', 'info');
-                // 地图右键点击事件 - 添加标记
-                map.off('rightclick');
+                map.off('rightclick', handleRightClickForMarker);
             }
         }
 
-        // 添加标记点
+        // 单独写一个 handler，方便解绑
+        function handleRightClickForMarker(e) {
+            if (!isAddingMarker) return;
+            var lnglat = e.lnglat;
+            var now = new Date();
+            var timeStr = formatDateTime(now);
+            addMarker(lnglat, timeStr);
+        }
+
         // 添加标记点（自定义 InfoWindow 替代方案）
         function addMarker(lnglat, timeStr) {
             var marker = new AMap.Marker({
