@@ -349,7 +349,7 @@
                 <div class="panel-title"><i>📍</i> 电子围栏绘制</div>
                 
                 <div class="btn-group">
-                    <button id="polygon-draw" class="active"><i>🔷</i> 绘制多边形</button>
+                    <button id="polygon-draw"><i>🔷</i> 绘制多边形</button>
                     <button id="circle-draw"><i>⭕</i> 绘制圆形</button>
                     <button id="clear-fences"><i>🗑️</i> 清除围栏</button>
                 </div>
@@ -446,12 +446,12 @@
         
         // 绑定按钮事件
         document.getElementById('polygon-draw').addEventListener('click', function() {
-            setActiveButton(this);
+            setActiveButton(this, true);
             startPolygonDrawing();
         });
         
         document.getElementById('circle-draw').addEventListener('click', function() {
-            setActiveButton(this);
+            setActiveButton(this, true);
             startCircleDrawing();
         });
         
@@ -462,7 +462,7 @@
         document.getElementById('render-circle').addEventListener('click', renderCircleFromInput);
         
         document.getElementById('add-marker').addEventListener('click', function () {
-            setActiveButton(this);
+            setActiveButton(this, true);
             markerCtl();
         });
         
@@ -491,15 +491,14 @@
         function setActiveButton(button, isActive) {
             var buttons = document.querySelectorAll('.btn-group button');
             buttons.forEach(function(btn) {
-                if (btn.id === 'add-marker' || button.id === 'add-marker') {
-                    isAddingMarker = false;
-                }
                 btn.classList.remove('active');
             });
             
             if (isActive !== false) {
                 button.classList.add('active');
             }
+
+
         }
         
         // 开始绘制多边形
@@ -532,6 +531,7 @@
                 points: []
             };
 
+            // 1s内双击右键结束多边形绘制
             let lastRightClickTime = 0;
             map.on("rightclick", function(e) {
                 let now = Date.now();
@@ -560,32 +560,6 @@
                 }
                 lastRightClickTime = now;
             });
-
-            // 监听地图点击事件
-            map.on("dblclick", function (e) {
-                // 解绑事件
-                map.off('click', handleMapClickForPolygon);
-                map.off('dblclick', finishPolygonDrawing);
-
-                console.log("双击事件触发：", e);
-                console.log("经度：" + e.lnglat.getLng() + "，纬度：" + e.lnglat.getLat());
-
-                if (!currentDrawingTool || currentDrawingTool.type !== 'polygon') return;
-
-                // 添加到围栏数组
-                fences.push({
-                    type: 'polygon',
-                    object: currentDrawingTool.polygon,
-                    points: currentDrawingTool.points
-                });
-
-                updateFenceList();
-
-                currentDrawingTool = null;
-
-                showMessage('多边形绘制完成', 'success');
-            });
-
 
             map.on('click', handleMapClickForPolygon);
             
@@ -671,8 +645,7 @@
                 var infoWindow = new AMap.InfoWindow({
                     content: '<div class="info-window">' +
                              '<p><strong>圆心位置</strong></p>' +
-                             '<p>经度: ' + lnglat.lng.toFixed(6) + '</p>' +
-                             '<p>纬度: ' + lnglat.lat.toFixed(6) + '</p>' +
+                             '<p>坐标: ' + lnglat.lng.toFixed(6) + ', ' + lnglat.lat.toFixed(6) + '</p>' +
                              '</div>',
                     offset: new AMap.Pixel(0, -30)
                 });
@@ -774,6 +747,11 @@
         
         // 清理绘制状态
         function cleanupDrawing() {
+            // 移除事件监听
+            map.off('click', handleMapClickForPolygon);
+            map.off('click', handleMapClickForCircleCenter);
+            map.off('rightclick');
+
             if (currentDrawingTool) {
                 if (currentDrawingTool.polygon) {
                     map.remove(currentDrawingTool.polygon);
@@ -795,11 +773,6 @@
                 map.remove(circleCenterMarker);
                 circleCenterMarker = null;
             }
-
-            // 移除事件监听
-            map.off('click', handleMapClickForPolygon);
-            map.off('click', handleMapClickForCircleCenter);
-            map.off('rightclick');
         }
 
         // 清除所有围栏
@@ -818,9 +791,7 @@
                 }
                 else if (fence.type === 'circle') {
                     // 移除圆形中心点标记
-                    if (fence.circleCenterMarker) {
-                        map.remove(fence.circleCenterMarker);
-                    }
+                    map.remove(fence.circleCenterMarker);
                 }
             });
 
@@ -944,6 +915,18 @@
         
         // 删除单个围栏
         function deleteFence(index) {
+            // 清除多边形顶点标记
+            polygonPointMarkers.forEach(function(marker) {
+                map.remove(marker);
+            });
+            polygonPointMarkers = [];
+
+            // 清除圆心标记（但不删除已完成的圆形围栏的标记）
+            if (circleCenterMarker && (!currentDrawingTool || currentDrawingTool.type !== 'circle')) {
+                map.remove(circleCenterMarker);
+                circleCenterMarker = null;
+            }
+
             if (index >= 0 && index < fences.length) {
                 var fence = fences[index];
 
@@ -960,9 +943,7 @@
                 }
                 else if (fence.type === 'circle') {
                     // 移除圆形中心点标记
-                    if (fence.circleCenterMarker) {
-                        map.remove(fence.circleCenterMarker);
-                    }
+                    map.remove(fence.circleCenterMarker);
                 }
 
                 // 从围栏数组中移除
@@ -1012,7 +993,7 @@
                     addMarker(lnglat, timeStr);
                 });
             } else {
-                setActiveButton(document.getElementById('add-marker'), isAddingMarker);
+                setActiveButton(document.getElementById('add-marker'), false);
                 showMessage('标记点添加已取消', 'info');
                 // 地图右键点击事件 - 添加标记
                 map.off('rightclick');
@@ -1217,8 +1198,8 @@
                 var item = document.createElement('div');
                 item.className = 'point-item';
                 item.innerHTML = '<div>点位 ' + (index + 1) + ': ' + 
-                                marker.info.lng.toFixed(4) + ', ' + 
-                                marker.info.lat.toFixed(4) + '</div>' +
+                                marker.info.lng.toFixed(6) + ', ' +
+                                marker.info.lat.toFixed(6) + '</div>' +
                                 '<div class="time">' + marker.info.time + '</div>';
                 pointList.appendChild(item);
             });
