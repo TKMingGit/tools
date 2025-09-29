@@ -638,13 +638,14 @@
                 content: '<div class="circle-center-marker"></div>',
                 offset: new AMap.Pixel(-9, -9)
             });
-            
+
             // 显示圆心坐标
             circleCenterMarker.on('click', function() {
                 var infoWindow = new AMap.InfoWindow({
                     content: '<div class="info-window">' +
                              '<p><strong>圆心位置</strong></p>' +
                              '<p>坐标: ' + lnglat.lng.toFixed(6) + ', ' + lnglat.lat.toFixed(6) + '</p>' +
+                             '<p>半径: ' +  + '</p>' +
                              '</div>',
                     offset: new AMap.Pixel(0, -30)
                 });
@@ -718,6 +719,7 @@
                     content: '<div class="info-window">' +
                              '<p><strong>圆心位置</strong></p>' +
                              '<p>坐标: ' + center.lng.toFixed(6) + ', ' + center.lat.toFixed(6) + '</p>' +
+                             '<p>半径: ' + radius + '米</p>' +
                              '</div>',
                     offset: new AMap.Pixel(0, -30)
                 });
