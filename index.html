@@ -1039,6 +1039,7 @@
             updatePointList();
         }
 
+        var currentMarkerPolyline = null;
         // 清除所有标记
         function clearAllMarkers() {
             markers.forEach(function(marker) {
@@ -1048,9 +1049,9 @@
             updatePointList();
             
             // 清除轨迹线
-            if (currentPolyline) {
-                map.remove(currentPolyline);
-                currentPolyline = null;
+            if (currentMarkerPolyline) {
+                map.remove(currentMarkerPolyline);
+                currentMarkerPolyline = null;
             }
             
             showMessage('所有标记点已清除', 'info');
@@ -1073,11 +1074,11 @@
             });
             
             // 清除现有的轨迹线
-            if (currentPolyline) {
-                map.remove(currentPolyline);
+            if (currentMarkerPolyline) {
+                map.remove(currentMarkerPolyline);
             }
-            
-            currentPolyline = new AMap.Polyline({
+
+            currentMarkerPolyline = new AMap.Polyline({
                 path: path,
                 strokeColor: "#28a745",
                 strokeWeight: 4,
@@ -1086,7 +1087,7 @@
             });
             
             // 调整地图视野以显示整个轨迹
-            map.setFitView([currentPolyline]);
+            map.setFitView([currentMarkerPolyline]);
             showMessage('轨迹绘制完成', 'success');
         }
         
