@@ -461,10 +461,7 @@
         
         document.getElementById('render-circle').addEventListener('click', renderCircleFromInput);
         
-        document.getElementById('add-marker').addEventListener('click', function () {
-            setActiveButton(this, true);
-            markerCtl();
-        });
+        document.getElementById('add-marker').addEventListener('click', markerCtl);
         
         document.getElementById('clear-markers').addEventListener('click', clearAllMarkers);
         
@@ -498,7 +495,9 @@
                 button.classList.add('active');
             }
 
-
+            if (isAddingMarker === true) {
+                isAddingMarker = false;
+            }
         }
         
         // 开始绘制多边形
@@ -981,7 +980,7 @@
         function markerCtl() {
             isAddingMarker = !isAddingMarker;
             if (isAddingMarker) {
-                showMessage('右键点击地图添加标记点', 'info');
+                showMessage('右键点击地图添加标记点，再次点击该按钮取消右键标记', 'info');
                 // 地图右键点击事件 - 添加标记
                 map.on('rightclick', function(e) {
                     if (!isAddingMarker) return;
@@ -993,7 +992,6 @@
                     addMarker(lnglat, timeStr);
                 });
             } else {
-                setActiveButton(document.getElementById('add-marker'), false);
                 showMessage('标记点添加已取消', 'info');
                 // 地图右键点击事件 - 添加标记
                 map.off('rightclick');
