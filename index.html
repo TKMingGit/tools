@@ -594,7 +594,8 @@
                         '<p><strong>多边形顶点</strong></p>' +
                         '<p>坐标: ' + lnglat.lng.toFixed(6) + ',' + lnglat.lat.toFixed(6) + '</p>' +
                         '</div>',
-                    offset: new AMap.Pixel(0, -30)
+                    offset: new AMap.Pixel(0, -30),
+                    closeWhenClickMap: false
                 });
                 infoWindow.open(map, lnglat);
             });
@@ -647,7 +648,8 @@
                              '<p>坐标: ' + lnglat.lng.toFixed(6) + ', ' + lnglat.lat.toFixed(6) + '</p>' +
                              '<p>半径: ' +  + '</p>' +
                              '</div>',
-                    offset: new AMap.Pixel(0, -30)
+                    offset: new AMap.Pixel(0, -30),
+                    closeWhenClickMap: false
                 });
                 
                 infoWindow.open(map, lnglat);
@@ -721,7 +723,8 @@
                              '<p>坐标: ' + center.lng.toFixed(6) + ', ' + center.lat.toFixed(6) + '</p>' +
                              '<p>半径: ' + radius + '米</p>' +
                              '</div>',
-                    offset: new AMap.Pixel(0, -30)
+                    offset: new AMap.Pixel(0, -30),
+                    closeWhenClickMap: false
                 });
                 
                 infoWindow.open(map, center);
@@ -1022,7 +1025,8 @@
 
                 var infoWindow = new AMap.InfoWindow({
                     content: infoContent,
-                    offset: new AMap.Pixel(0, -30)
+                    offset: new AMap.Pixel(0, -30),
+                    closeWhenClickMap: false
                 });
 
                 infoWindow.open(map, marker.getPosition());
