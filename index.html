@@ -339,6 +339,7 @@
         }
 
         .custom-info-window {
+            width: max-content;
             min-width: 200px;
             background: #fff;
             border: 1px solid #ccc;
@@ -1376,24 +1377,112 @@
                 return;
             }
 
-            var arr = jsonObj.data.arrLocationInfo;
+            let arr = jsonObj.data.arrLocationInfo;
 
             // 按时间排序
+            if (arr.length < 2) {
+                showMessage('轨迹点数小于2个，无法绘制轨迹线', 'error');
+                return;
+            }
+
+            clearAllMarkers();
+
             arr.sort(function(a, b) {
                 return new Date(a.locationTime) - new Date(b.locationTime);
             });
 
-            var path = arr.map(function(item) {
-                return [parseFloat(item.longitude), parseFloat(item.latitude)];
-            }).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+            let path = [];
+            let pointMarkers = [];
 
-            if (path.length < 2) {
-                showMessage('有效轨迹点不足，无法绘制轨迹线', 'error');
-                return;
+            for (let i = 0; i < arr.length; i++) {
+                let item = arr[i];
+                let lng = parseFloat(item.longitude);
+                let lat = parseFloat(item.latitude);
+                if (isNaN(lng) || isNaN(lat)) {
+                    showMessage(`第 ${i + 1} 个轨迹点经纬度无效，导入失败`, 'error');
+                    continue;
+                }
+
+                // 放到路径里面
+                path.push([lng, lat]);
+
+                let lnglat = new AMap.LngLat(lng, lat);
+
+                // 中间点
+                let pointMarker;
+
+                // 起点
+                if (i===0) {
+                    // 起点 marker
+                    pointMarker = new AMap.Marker({
+                        position: lnglat,
+                        map: map,
+                        icon: "./images/marker-icon-green.png",
+                        offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
+                    });
+                } else if (i === arr.length - 1) {
+                    // 终点 marker
+                    pointMarker = new AMap.Marker({
+                        position: lnglat,
+                        map: map,
+                        icon: "./images/marker-icon-red.png",
+                        offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
+                    });
+                } else {
+                    // 途径点 marker
+                    pointMarker = new AMap.Marker({
+                        position: lnglat,
+                        map: map,
+                        content: '<div style="width:8px;height:8px;background:#3366FF;border-radius:50%;border:1px solid white;"></div>',
+                        offset: new AMap.Pixel(-4, -4)
+                    });
+                }
+
+                // 点击弹出 InfoWindow
+                pointMarker.infoMarker = null;
+                pointMarker.on('click', function() {
+                    if (pointMarker.infoMarker) {
+                        // 已经有 infoWindow，就不重复创建
+                        return;
+                    }
+
+                    let infoDom = document.createElement('div');
+                    infoDom.className = 'custom-info-window';
+                    infoDom.innerHTML = `
+                            <div class="ciw-header">
+                                <span><strong>轨迹点</strong></span>
+                                <div class="ciw-actions">
+                                    <span class="ciw-close">×</span>
+                                </div>
+                            </div>
+                            <div class="ciw-body">
+                                <p>坐标: ${lng.toFixed(6)}, ${lat.toFixed(6)}</p>
+                                <p>轨迹时间: ${item.locationTime || ''}</p>
+                                <p>创建时间: ${item.crt || ''}</p>
+                            </div>
+                        `;
+
+                    let infoMarker = new AMap.Marker({
+                        position: lnglat,
+                        offset: new AMap.Pixel(-100, -120),
+                        content: infoDom,
+                        map: map
+                    });
+                    pointMarker.infoMarker = infoMarker;
+
+                    // 关闭按钮
+                    infoDom.querySelector('.ciw-close').onclick = function() {
+                        map.remove(infoMarker);
+                        pointMarker.infoMarker = null;
+                    };
+                });
+
+                //添加到点位集合
+                pointMarkers.push(pointMarker);
             }
 
             // 绘制轨迹线
-            var polyline = new AMap.Polyline({
+            let polyline = new AMap.Polyline({
                 path: path,
                 strokeColor: "#3366FF",
                 strokeWeight: 4,
@@ -1402,31 +1491,14 @@
             });
             map.add(polyline);
 
-            // 起点 marker
-            var startMarker = new AMap.Marker({
-                position: path[0],
-                map: map,
-                icon: "./images/marker-icon-green.png",
-                offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
-            });
-
-            // 终点 marker
-            var endMarker = new AMap.Marker({
-                position: path[path.length - 1],
-                map: map,
-                icon: "./images/marker-icon-red.png",
-                offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
-            });
-
             // 保存本次导入的轨迹对象
             importedTracks.push({
                 polyline: polyline,
-                startMarker: startMarker,
-                endMarker: endMarker
+                pointMarkers: pointMarkers
             });
 
             // 自动缩放视野
-            map.setFitView([polyline, startMarker, endMarker]);
+            map.setFitView([polyline]);
 
             showMessage(`成功导入 ${path.length} 个轨迹点并绘制轨迹线`, 'success');
         }
@@ -1437,9 +1509,14 @@
 
             importedTracks.forEach(function(track) {
                 if (track.polyline) map.remove(track.polyline);
-                if (track.startMarker) map.remove(track.startMarker);
-                if (track.endMarker) map.remove(track.endMarker);
-                if (track.carMarker) map.remove(track.carMarker);
+                if (track.pointMarkers) {
+                    track.pointMarkers.forEach(function(marker) {
+                        if (marker.infoMarker) {
+                            map.remove(marker.infoMarker);
+                        }
+                        map.remove(marker);
+                    });
+                }
             });
 
             importedTracks = [];
