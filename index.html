@@ -1205,6 +1205,15 @@
                     }
                     map.remove(marker);
                     markers = markers.filter(m => m !== marker);
+
+                    if (markers.length === 0) {
+                        // 如果没有标记点了，清除轨迹线
+                        if (currentMarkerPolyline) {
+                            map.remove(currentMarkerPolyline);
+                            currentMarkerPolyline = null;
+                        }
+                    }
+
                     updatePointList();
                     showMessage('标记点已删除', 'info');
                 };
