@@ -455,8 +455,22 @@
                         <button id="delete-tracks-btn">删除轨迹</button>
                     </div>
 
-                    <input type="file" id="json-file" accept="application/json">
-                    <button id="import-track-jsonFile">📥 导入轨迹(JSON文件)</button>
+                    <div class="btn-group">
+                        <input type="file" id="json-file" accept="application/json">
+                        <button id="import-track-jsonFile">📥 导入轨迹(JSON文件)</button>
+                    </div>
+
+                    <div class="input-group">
+                      <label for="plateNo">车牌号:</label>
+                      <input type="text" id="plateNo" placeholder="请输入车牌号" value="川A888888">
+                      <label for="startTime">开始时间:</label>
+                      <input type="datetime-local" step="1" id="startTime">
+                      <label for="endTime">结束时间:</label>
+                      <input type="datetime-local" step="1" id="endTime">
+                      <label for="collectionDate">数据表日期:</label>
+                      <input type="text" id="collectionDate" placeholder="请输入数据所属数据表日期" value="20250921">
+                      <button id="query-track-mongo"><i>🔍</i> 查询并渲染轨迹</button>
+                    </div>
                 </div>
                 
                 <div class="input-group">
@@ -497,6 +511,27 @@
         var currentPolyline = null;
         var importedTracks = [];
 
+        // 页面加载时执行
+        window.onload = function () {
+            const startInput = document.getElementById("startTime");
+            const endInput = document.getElementById("endTime");
+
+            // 获取今天 0 点
+            let now = new Date();
+            let startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds());
+            let endOfDay = new Date(startOfDay);
+            endOfDay.setDate(endOfDay.getDate() + 1); // 第二天 0 点
+
+            // 转换为 datetime-local 支持的格式：yyyy-MM-ddTHH:mm:ss
+            function formatDateToInput(date) {
+                const pad = n => String(n).padStart(2, '0');
+                return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+            }
+
+            startInput.value = formatDateToInput(startOfDay);
+            endInput.value = formatDateToInput(endOfDay);
+        };
+
         // 绑定按钮事件
         document.getElementById('polygon-draw').addEventListener('click', function() {
             setActiveButton(this, true);
@@ -534,6 +569,9 @@
         document.getElementById('import-track-jsonObj').addEventListener('click', e => importTrackByJsonObj(1));
         document.getElementById('import-track-jsonObj-gd').addEventListener('click', e => importTrackByJsonObj(2));
         document.getElementById('delete-tracks-btn').addEventListener('click', deleteImportedTracks);
+
+        // 查询轨迹
+        document.getElementById("query-track-mongo").addEventListener("click", queryTrackFromMongo);
 
         document.getElementById('import-track-jsonFile').addEventListener('click', importTrackByJsonFile);
 
@@ -1591,6 +1629,40 @@
 
             showMessage('已删除导入的轨迹', 'info');
         }
+
+        // 从Mongo查询轨迹并渲染
+        async function queryTrackFromMongo() {
+            const plateNo = document.getElementById("plateNo").value.trim();
+            let startTime = document.getElementById("startTime").value;
+            let endTime = document.getElementById("endTime").value;
+            let collectionDate = document.getElementById("collectionDate").value.trim();
+
+            // 如果没填，默认当天0点到次日0点
+            if (!startTime || !endTime) {
+                showMessage("请输入时间范围", "error");
+            }
+
+            if (!plateNo) {
+                showMessage("请输入车牌号", "error");
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/api/tracks?plateNo=${plateNo}&start=${startTime}&end=${endTime}&collectionDate=${collectionDate}`);
+                const jsonObj = await resp.json();
+
+                if (!jsonObj || !jsonObj.data || !jsonObj.data.arrLocationInfo || jsonObj.data.arrLocationInfo.length === 0) {
+                    showMessage("未查询到轨迹数据", "error");
+                    return;
+                }
+
+                importPointsAndDrawLineGd(jsonObj);
+            } catch (e) {
+                console.error(e);
+                showMessage("查询失败", "error");
+            }
+        }
+
 
         // 导入轨迹，通过json文件
         function importTrackByJsonFile() {
