@@ -1417,6 +1417,7 @@
                     pointMarker = new AMap.Marker({
                         position: lnglat,
                         map: map,
+                        title: "起点",
                         icon: "./images/marker-icon-green.png",
                         offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
                     });
@@ -1425,6 +1426,7 @@
                     pointMarker = new AMap.Marker({
                         position: lnglat,
                         map: map,
+                        title: "终点",
                         icon: "./images/marker-icon-red.png",
                         offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
                     });
@@ -1433,6 +1435,7 @@
                     pointMarker = new AMap.Marker({
                         position: lnglat,
                         map: map,
+                        title: "途径点",
                         content: '<div style="width:8px;height:8px;background:#3366FF;border-radius:50%;border:1px solid white;"></div>',
                         offset: new AMap.Pixel(-4, -4)
                     });
@@ -1491,16 +1494,73 @@
             });
             map.add(polyline);
 
+            // 小车 marker（用小图标替代）
+            let carMarker = new AMap.Marker({
+                map: map,
+                position: path[0],
+                icon: new AMap.Icon({
+                    image: "./images/icon-car.png",
+                    size: new AMap.Size(20, 20), // 缩小图标大小，原始为 30x30，可以调整为更小
+                    imageSize: new AMap.Size(20, 20) // 适应缩放比例
+                }),
+                offset: new AMap.Pixel(-7, -13),
+                autoRotation: true,
+                angle: 0,
+            });
+
             // 保存本次导入的轨迹对象
             importedTracks.push({
                 polyline: polyline,
-                pointMarkers: pointMarkers
+                pointMarkers: pointMarkers,
+                carMarker: carMarker
             });
 
             // 自动缩放视野
             map.setFitView([polyline]);
 
             showMessage(`成功导入 ${path.length} 个轨迹点并绘制轨迹线`, 'success');
+
+            // 启动小车沿轨迹线运行
+            startCarMoving(path, carMarker);
+        }
+
+        // 小车沿轨迹线运行的函数
+        function startCarMoving(path, carMarker) {
+            if (!path || path.length < 2) return;
+
+            let index = 0; // 当前轨迹点索引
+            let speed = 200; // 每隔0.2秒钟移动一个轨迹点
+            let moveInterval = setInterval(function() {
+                if (index >= path.length - 1) {
+                    clearInterval(moveInterval); // 停止移动
+                    map.remove(carMarker); // 移除小车
+                    return;
+                }
+
+                index++;
+                let currentPoint = path[index - 1];
+                let nextPoint = path[index];
+
+                let currentLngLat = new AMap.LngLat(currentPoint[0], currentPoint[1]);
+                let nextLngLat = new AMap.LngLat(nextPoint[0], nextPoint[1]);
+
+                // 计算车头的旋转角度
+                let angle = calculateAngle(currentLngLat, nextLngLat);
+
+                // 更新小车的位置
+                carMarker.setPosition(nextLngLat);
+
+                // 旋转小车图标，让车头指向下一个点
+                carMarker.setAngle(angle);
+            }, speed);
+        }
+
+        // 计算两个经纬度之间的方位角
+        function calculateAngle(currentLngLat, nextLngLat) {
+            let dx = nextLngLat.getLng() - currentLngLat.getLng();
+            let dy = nextLngLat.getLat() - currentLngLat.getLat();
+             // 转换为度数
+            return Math.atan2(dy, dx) * (180 / Math.PI);
         }
 
         // 删除通过json对象方式导入的轨迹
@@ -1509,6 +1569,7 @@
 
             importedTracks.forEach(function(track) {
                 if (track.polyline) map.remove(track.polyline);
+                if (track.carMarker) map.remove(track.carMarker);
                 if (track.pointMarkers) {
                     track.pointMarkers.forEach(function(marker) {
                         if (marker.infoMarker) {
