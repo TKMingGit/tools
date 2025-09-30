@@ -34,8 +34,8 @@ router.get("/", async (req, res) => {
           id: d._id,
           longitude: d.lon,
           latitude: d.lat,
-          locationTime: new Date(d.utc),
-          crt: d.createDate
+          locationTime: new Date(d.utc).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }).replaceAll("/", "-"),
+          crt: new Date(d.createDate).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }).replaceAll("/", "-")
         }))
       }
     });
