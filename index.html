@@ -1337,7 +1337,7 @@
                 return;
             }
 
-            clearAllMarkers();
+            deleteImportedTracks();
 
             var arr = jsonObj.data.arrLocationInfo;
 
@@ -1345,8 +1345,6 @@
             arr.sort(function(a, b) {
                 return new Date(a.locationTime) - new Date(b.locationTime);
             });
-
-            clearAllMarkers();
 
             var path = [];
 
