@@ -585,7 +585,7 @@
 
             let fenceInfo = document.getElementById('fence-inout');
             if (fenceInfo) {
-                let jsonObj = {"sendFenceShapeType":1,"sendFence":[116.317646,39.985438],"sendFenceRadius":1.0,"sendInLonLat":"116.303849,39.9833","sendInTime":"2025-09-26T06:47:18.735Z","sendInUpdateLonLat":"116.32933,39.985669","sendInUpdateTime":"2025-09-26T08:19:50.292Z","sendOutLonLat":"116.315544,39.985202","sendOutTime":"2025-09-26T06:48:06.735Z","sendOutUpdateLonLat":"116.305662,39.984918","sendOutUpdateTime":"2025-09-26T08:20:33.292Z","receiveFenceShapeType":1,"receiveFence":[116.400972,39.988587],"receiveFenceRadius":0.5,"receiveInLonLat":"116.327179,39.986672","receiveInTime":"2025-09-26T08:10:45.228Z","receiveInUpdateLonLat":"116.401053,39.992723","receiveInUpdateTime":"2025-09-26T08:18:31.292Z","receiveOutLonLat":"116.315731,39.985207","receiveOutTime":"2025-09-26T08:11:08.228Z","receiveOutUpdateLonLat":"116.393993,39.987997","receiveOutUpdateTime":"2025-09-26T08:18:54.292Z"};
+                let jsonObj = {"sendFenceShapeType":1,"sendFence":[116.317646,39.985438],"sendFenceRadius":1,"sendInLonLat":"116.310917, 39.985402","sendInTime":"2025-09-26T06:47:18.735Z","sendInUpdateLonLat":"116.320138, 39.985652","sendInUpdateTime":"2025-09-26T08:19:50.292Z","sendOutLonLat":"116.332321, 39.986271","sendOutTime":"2025-09-26T06:48:06.735Z","sendOutUpdateLonLat":"116.336427, 39.986426","sendOutUpdateTime":"2025-09-26T08:20:33.292Z","receiveFenceShapeType":1,"receiveFence":[116.400972,39.988587],"receiveFenceRadius":0.5,"receiveInLonLat":"116.397032, 39.988750","receiveInTime":"2025-09-26T08:10:45.228Z","receiveInUpdateLonLat":"116.398418, 39.989919","receiveInUpdateTime":"2025-09-26T08:18:31.292Z","receiveOutLonLat":"116.393911, 39.988219","receiveOutTime":"2025-09-26T08:11:08.228Z","receiveOutUpdateLonLat":"116.391340, 39.988445","receiveOutUpdateTime":"2025-09-26T08:18:54.292Z"};
                 fenceInfo.value = JSON.stringify(jsonObj, null, 2);
             }
         });
@@ -1216,11 +1216,11 @@
         }
 
         // 添加标记点（自定义 InfoWindow 替代方案）
-        function addMarker(lnglat, timeStr, crt, title) {
+        function addMarker(lnglat, timeStr, crt, title, icon) {
             var marker = new AMap.Marker({
                 position: lnglat,
                 map: map,
-                icon: "./images/marker-icon-blue.png",
+                icon: icon || "./images/marker-icon-blue.png",
                 offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
             });
 
@@ -1796,15 +1796,17 @@
                 let obj = JSON.parse(textarea.value);
                 let fenceOpacity = parseFloat(document.getElementById('fence-opacity').value);
 
+                deleteFenceInoutInfo();
+
                 // 统一渲染方法
                 function renderFenceAndPoints(center, radiusKm, inLonLat, inTime, inUpdateLonLat, inUpdateTime, outLonLat, outTime, outUpdateLonLat, outUpdateTime, fenceColor, fenceTip) {
                     if (!center || !radiusKm) return;
                     renderCircleFromParam(center[0]+','+center[1], radiusKm*1000, fenceColor, fenceOpacity)
 
-                    addMarker(new AMap.LngLat(inLonLat.split(",")[0], inLonLat.split(",")[1]), inTime, null, fenceTip + "进入点位");
-                    addMarker(new AMap.LngLat(inUpdateLonLat.split(",")[0], inUpdateLonLat.split(",")[1]), inUpdateTime, null, fenceTip + "进入更新点位");
-                    addMarker(new AMap.LngLat(outLonLat.split(",")[0], outLonLat.split(",")[1]), outTime, null, fenceTip + "离开点位");
-                    addMarker(new AMap.LngLat(outUpdateLonLat.split(",")[0], outUpdateLonLat.split(",")[1]), outUpdateTime, null, fenceTip + "离开更新点位");
+                    addMarker(new AMap.LngLat(inLonLat.split(",")[0], inLonLat.split(",")[1]), inTime, null, fenceTip + "进入", "./images/fence-in-blue-dot.png");
+                    addMarker(new AMap.LngLat(inUpdateLonLat.split(",")[0], inUpdateLonLat.split(",")[1]), inUpdateTime, null, fenceTip + "进入更新", "./images/fence-in-update-green-dot.png");
+                    addMarker(new AMap.LngLat(outLonLat.split(",")[0], outLonLat.split(",")[1]), outTime, null, fenceTip + "离开", "./images/fence-out-red-dot.png");
+                    addMarker(new AMap.LngLat(outUpdateLonLat.split(",")[0], outUpdateLonLat.split(",")[1]), outUpdateTime, null, fenceTip + "离开更新","./images/fence-out-update-yellow-dot.png");
 
                     map.setFitView([...markers]);
                 }
@@ -1818,7 +1820,7 @@
                     obj.sendOutLonLat, obj.sendOutTime,
                     obj.sendOutUpdateLonLat, obj.sendOutUpdateTime,
                     "#1791fc",
-                    "发货地"
+                    "发-"
                 );
 
                 // receiveFence
@@ -1830,7 +1832,7 @@
                     obj.receiveOutLonLat, obj.receiveOutTime,
                     obj.receiveOutUpdateLonLat, obj.receiveOutUpdateTime,
                     "#ff5a5f",
-                    "收货地"
+                    "收-"
                 );
 
                 showMessage('围栏与点位渲染完成', 'success');
