@@ -842,6 +842,8 @@
             
             // 更新输入框
             document.getElementById('circle-center').value = lnglat.lng.toFixed(6) + ',' + lnglat.lat.toFixed(6);
+
+            renderCircleFromInput();
             
             map.off('click', handleMapClickForCircleCenter);
             showMessage('圆心已设置，请在侧边栏输入半径并点击"渲染圆形"按钮', 'info');
