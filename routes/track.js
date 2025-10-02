@@ -1,5 +1,15 @@
 const express = require("express");
 const router = express.Router();
+const options = {
+  timeZone: "Asia/Shanghai",
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false // 使用24小时制
+};
 
 // GET /api/tracks?plateNo=川8888885&start=2025-09-29T08:00:00&end=2025-09-29T20:00:00&collection=20250921
 router.get("/", async (req, res) => {
@@ -34,8 +44,8 @@ router.get("/", async (req, res) => {
           id: d._id,
           longitude: d.lon,
           latitude: d.lat,
-          locationTime: new Date(d.utc).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }).replaceAll("/", "-"),
-          crt: new Date(d.createDate).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }).replaceAll("/", "-")
+          locationTime: new Date(d.utc).toLocaleString("zh-CN", options).replaceAll("/", "-"),
+          crt: new Date(d.createDate).toLocaleString("zh-CN", options).replaceAll("/", "-")
         }))
       }
     });

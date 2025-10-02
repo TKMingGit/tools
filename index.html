@@ -454,7 +454,7 @@
                 
                 <div class="input-group">
                     <label for="import-points">导入点位数据 (经度,纬度,时间):</label>
-                    <textarea id="import-points">116.397428,39.60923,2023-10-01 10:00:00&#10;116.407428,39.70923,2023-10-01 10:05:00&#10;116.507428,39.80923,2023-10-01 10:10:00</textarea>
+                    <textarea id="import-points">116.397428,39.60923,2025-10-01 10:00:00&#10;116.407428,39.70923,2025-10-01 10:05:00&#10;116.507428,39.80923,2025-10-01 10:10:00</textarea>
                     <button id="import-track"><i>📥</i> 导入轨迹</button>
 
                     <label for="import-points-jsonObj">TMS轨迹响应对象:</label>
@@ -467,6 +467,7 @@
 
                     <div class="btn-group">
                         <input type="file" id="json-file" accept="application/json">
+                        <button id="import-track-jsonFile-template">📥 下载模板(JSON文件)</button>
                         <button id="import-track-jsonFile">📥 导入轨迹(JSON文件)</button>
                     </div>
                 </div>
@@ -528,6 +529,16 @@
         var currentDrawingTool = null;
         var currentPolyline = null;
         var importedTracks = [];
+        const options = {
+            timeZone: "Asia/Shanghai",
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false // 使用24小时制
+        };
 
         // 页面加载时执行
         window.onload = function () {
@@ -597,6 +608,7 @@
         // 查询轨迹
         document.getElementById("query-track-mongo").addEventListener("click", queryTrackFromMongo);
 
+        document.getElementById('import-track-jsonFile-template').addEventListener('click', importTrackByJsonFileTemplate);
         document.getElementById('import-track-jsonFile').addEventListener('click', importTrackByJsonFile);
 
         document.getElementById('export-points').addEventListener('click', exportPoints);
@@ -1226,7 +1238,7 @@
                 offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
             });
 
-            marker.info = { lng: lnglat.lng, lat: lnglat.lat, time: timeStr, crt: crt ||''};
+            marker.info = { lon: lnglat.lng, lat: lnglat.lat, utc: timeStr, crt: crt ||''};
 
             marker.infoMarker = null; // 先预留
 
@@ -1258,7 +1270,7 @@
                 // 用 Marker 显示“信息窗”
                 var infoMarker = new AMap.Marker({
                     position: marker.getPosition(),
-                    offset: new AMap.Pixel(-99, -130), // 调整到 marker 上方
+                    offset: new AMap.Pixel(-99, -142), // 调整到 marker 上方
                     content: infoDom,
                     map: map,
                     clickable: true
@@ -1360,6 +1372,8 @@
                 showMessage('请输入要导入的点位数据', 'error');
                 return;
             }
+
+            deleteImportedTracks();
             
             var lines = pointsText.split('\n');
             var importedMarkers = [];
@@ -1371,7 +1385,7 @@
                     if (parts.length >= 2) {
                         var lng = parseFloat(parts[0]);
                         var lat = parseFloat(parts[1]);
-                        var timeStr = parts.length >= 3 ? parts[2] : new Date().toLocaleString();
+                        var timeStr = parts.length >= 3 ? parts[2] : new Date().toLocaleString("zh-CN", options);
                         
                         if (!isNaN(lng) && !isNaN(lat)) {
                             var lnglat = new AMap.LngLat(lng, lat);
@@ -1381,7 +1395,7 @@
                     }
                 }
             }
-            
+
             if (importedMarkers.length > 0) {
                 // 自动绘制轨迹
                 drawTrack();
@@ -1478,17 +1492,17 @@
 
             for (let i = 0; i < arr.length; i++) {
                 let item = arr[i];
-                let lng = parseFloat(item.longitude);
+                let lon = parseFloat(item.longitude);
                 let lat = parseFloat(item.latitude);
-                if (isNaN(lng) || isNaN(lat)) {
+                if (isNaN(lon) || isNaN(lat)) {
                     showMessage(`第 ${i + 1} 个轨迹点经纬度无效，导入失败`, 'error');
                     continue;
                 }
 
                 // 放到路径里面
-                path.push([lng, lat]);
+                path.push([lon, lat]);
 
-                let lnglat = new AMap.LngLat(lng, lat);
+                let lnglat = new AMap.LngLat(lon, lat);
 
                 // 中间点
                 let pointMarker;
@@ -1523,7 +1537,7 @@
                     });
                 }
 
-                pointMarker.info = { lng: lng, lat: lat, time: item.locationTime, crt: item.crt };
+                pointMarker.info = { lon: lon, lat: lat, utc: item.locationTime, crt: item.crt };
 
                 // 点击弹出 InfoWindow
                 pointMarker.infoMarker = null;
@@ -1543,15 +1557,15 @@
                                 </div>
                             </div>
                             <div class="ciw-body">
-                                <p>坐标: ${lng.toFixed(6)}, ${lat.toFixed(6)}</p>
-                                <p>轨迹时间: ${item.locationTime || ''}</p>
+                                <p>坐标: ${lon.toFixed(6)}, ${lat.toFixed(6)}</p>
+                                <p>时间: ${item.locationTime || ''}</p>
                                 <p>创建时间: ${item.crt || ''}</p>
                             </div>
                         `;
 
                     let infoMarker = new AMap.Marker({
                         position: lnglat,
-                        offset: new AMap.Pixel(-100, -120),
+                        offset: new AMap.Pixel(-100, -142),
                         content: infoDom,
                         map: map
                     });
@@ -1705,6 +1719,15 @@
             }
         }
 
+        function importTrackByJsonFileTemplate() {
+            var jsonData = [{"lon":116.397428,"lat":39.60923,"utc":1759284000000,"crt":"2025-10-01 10:00:00"},{"lon":116.407428,"lat":39.70923,"utc":1759284300000,"crt":"2025-10-01 10:05:00"},{"lon":116.507428,"lat":39.80923,"utc":1759284600000,"crt":"2025-10-01 10:10:00"}];
+            var blob = new Blob([JSON.stringify(jsonData, null, 2)], {type: "application/json"});
+            var link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "template_" + new Date().toISOString().slice(0,10) + ".json";
+            link.click();
+            showMessage('模板下载成功', 'success');
+        }
 
         // 导入轨迹，通过json文件
         function importTrackByJsonFile() {
@@ -1714,6 +1737,8 @@
                 return;
             }
 
+            deleteImportedTracks();
+
             var file = fileInput.files[0];
             var reader = new FileReader();
             reader.onload = function(e) {
@@ -1722,8 +1747,10 @@
                     if (!Array.isArray(points)) throw new Error("格式错误");
 
                     points.forEach(p => {
-                        var lnglat = new AMap.LngLat(p.lng, p.lat);
-                        addMarker(lnglat, p.time || new Date().toLocaleString());
+                        var lnglat = new AMap.LngLat(p.lon, p.lat);
+                        var locationTime = new Date(p.utc).toLocaleString("zh-CN", options).replaceAll("/", "-");
+                        var crt = p.crt;
+                        addMarker(lnglat, locationTime, crt);
                     });
 
                     drawTrack();
@@ -1774,10 +1801,10 @@
                 var item = document.createElement('div');
                 item.className = 'point-item';
                 item.innerHTML = '<div>点位 ' + (index + 1) + ': ' + 
-                                marker.info.lng.toFixed(6) + ', ' +
+                                marker.info.lon.toFixed(6) + ', ' +
                                 marker.info.lat.toFixed(6) + '</div>' +
-                                '<div class="time">' + marker.info.time + '</div>' +
-                                '<div class="time">' + marker.info.crt + '</div>';
+                                '<div class="time" title="UTC时间">' + marker.info.utc + '</div>' +
+                                '<div class="time" title="创建时间">' + marker.info.crt + '</div>';
                 pointList.appendChild(item);
             });
         }
