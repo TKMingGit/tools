@@ -1320,7 +1320,7 @@
                 // 用 Marker 显示“信息窗”
                 var infoMarker = new AMap.Marker({
                     position: marker.getPosition(),
-                    offset: new AMap.Pixel(-99, -142), // 调整到 marker 上方
+                    offset: icon ? new AMap.Pixel(-99, -160) : new AMap.Pixel(-99, -142), // 调整到 marker 上方
                     content: infoDom,
                     map: map,
                     clickable: true
