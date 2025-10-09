@@ -11,21 +11,23 @@ const options = {
   hour12: false // 使用24小时制
 };
 
-// GET /api/tracks?plateNo=川8888885&start=2025-09-29T08:00:00&end=2025-09-29T20:00:00&collection=20250921
+// GET /api/tracks?plateNo=川8888885&start=2025-09-29T08:00:00&end=2025-09-29T20:00:00&collection=20250921&dataSource=local
 router.get("/", async (req, res) => {
-  const { plateNo, start, end, collectionDate } = req.query;
-  if (!plateNo || !start || !end || !collectionDate) {
+  const { plateNo, start, end, collectionDate, dataSource } = req.query;
+  if (!plateNo || !start || !end || !collectionDate || !dataSource) {
     return res.status(400).json({ msg: "参数缺失" });
   }
-  console.log("Received params:", { plateNo, start, end, collectionDate });
+  console.log("Received params:", { plateNo, start, end, collectionDate, dataSource });
 
   try {
-    const db = req.app.locals.db;
-    const collection = db.collection("xn_m_vehicle_last_location" + collectionDate);
+    const db = req.app.locals.dbs?.[dataSource];
+    console.log("Using DB:", dataSource, db)
 
-    // console.log("Querying collection:", "xn_m_vehicle_last_location" + collectionDate);
-    // console.log("Query parameters startTime:", start, new Date(start).getTime());
-    // console.log("Query parameters endTime:", end, new Date(end).getTime());
+    if (!db) {
+      return res.status(400).json({ msg: "无效的数据源" });
+    }
+
+    const collection = db.collection("xn_m_vehicle_last_location" + collectionDate);
 
     const docs = await collection.find({
       vno: plateNo,

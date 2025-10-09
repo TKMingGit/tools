@@ -485,7 +485,14 @@
                         <input type="datetime-local" step="1" id="endTime">
                         <label for="collectionDate">数据表日期:</label>
                         <input type="text" id="collectionDate" placeholder="请输入数据所属数据表日期" value="20250921">
-                        <button id="query-track-mongo"><i>🔍</i> 查询并渲染轨迹</button>
+                        <label for="dataSource">数据源:</label>
+                        <select id="dataSource">
+                            <option value="local">local</option>
+                            <option value="dev">dev</option>
+                            <option value="test">test</option>
+                            <option value="pre">pre</option>
+                        </select>
+                        <button id="query-track-mongo"><i>🔍</i> 查询</button>
                     </div>
                 </div>
             </div>
@@ -544,10 +551,11 @@
         window.onload = function () {
             const startInput = document.getElementById("startTime");
             const endInput = document.getElementById("endTime");
+            const collectionDateInput = document.getElementById("collectionDate");
 
             // 获取今天 0 点
             let now = new Date();
-            let startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds());
+            let startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
             let endOfDay = new Date(startOfDay);
             endOfDay.setDate(endOfDay.getDate() + 1); // 第二天 0 点
 
@@ -559,6 +567,29 @@
 
             startInput.value = formatDateToInput(startOfDay);
             endInput.value = formatDateToInput(endOfDay);
+
+            // 初始化 collectionDate
+            function formatCollectionDate(date) {
+                const pad = n => String(n).padStart(2, '0');
+                const year = String(date.getFullYear());
+                const month = pad(date.getMonth() + 1);
+                const day = date.getDate();
+
+                let daySegment = '01';
+                if (day >= 1 && day <= 10) {
+                    daySegment = '01';
+                } else if (day >= 11 && day <= 20) {
+                    daySegment = '11';
+                } else {
+                    daySegment = '21';
+                }
+
+                return year + month + daySegment;
+            }
+
+            if (collectionDateInput) {
+                collectionDateInput.value = formatCollectionDate(now);
+            }
         };
 
         // 绑定按钮事件
@@ -1249,6 +1280,14 @@
                 offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
             });
 
+            if (timeStr && timeStr.trim() !== '') {
+                timeStr = new Date(timeStr).toLocaleString("zh-CN", options).replaceAll("/", "-");
+            }
+
+            if (crt && crt.trim() !== '') {
+                crt = new Date(crt).toLocaleString("zh-CN", options).replaceAll("/", "-");
+            }
+
             marker.info = { lon: lnglat.lng, lat: lnglat.lat, utc: timeStr, crt: crt ||''};
 
             marker.infoMarker = null; // 先预留
@@ -1697,12 +1736,22 @@
             showMessage('已删除导入的轨迹', 'info');
         }
 
+        function ensureSeconds(datetimeStr) {
+            if (!datetimeStr) return datetimeStr;
+            // 如果长度是16，说明格式是 yyyy-MM-ddTHH:mm，没有秒
+            if (datetimeStr.length === 16) {
+                return datetimeStr + ':00';
+            }
+            return datetimeStr;
+        }
+
         // 从Mongo查询轨迹并渲染
         async function queryTrackFromMongo() {
             const plateNo = document.getElementById("plateNo").value.trim();
-            let startTime = document.getElementById("startTime").value;
-            let endTime = document.getElementById("endTime").value;
+            let startTime = ensureSeconds(document.getElementById("startTime").value);
+            let endTime = ensureSeconds(document.getElementById("endTime").value);
             let collectionDate = document.getElementById("collectionDate").value.trim();
+            let dataSource = document.getElementById("dataSource").value;
 
             // 如果没填，默认当天0点到次日0点
             if (!startTime || !endTime) {
@@ -1715,7 +1764,7 @@
             }
 
             try {
-                const resp = await fetch(`/api/tracks?plateNo=${plateNo}&start=${startTime}&end=${endTime}&collectionDate=${collectionDate}`);
+                const resp = await fetch(`/api/tracks?plateNo=${plateNo}&start=${startTime}&end=${endTime}&collectionDate=${collectionDate}&dataSource=${dataSource}`);
                 const jsonObj = await resp.json();
 
                 if (!jsonObj || !jsonObj.data || !jsonObj.data.arrLocationInfo || jsonObj.data.arrLocationInfo.length === 0) {
