@@ -1,0 +1,70 @@
+{
+  "sendFenceShapeType": 1,
+  "sendFence": [
+    116.317646,
+    39.985438
+  ],
+  "sendFenceRadius": 1,
+  "sendFenceList": [
+    {
+      "longitude": "116.304402",
+      "latitude": "39.991465"
+    },
+    {
+      "longitude": "116.325680",
+      "latitude": "39.993572"
+    },
+    {
+      "longitude": "116.330955",
+      "latitude": "39.985216"
+    },
+    {
+      "longitude": "116.325563",
+      "latitude": "39.977722"
+    },
+    {
+      "longitude": "116.306043",
+      "latitude": "39.981591"
+    }
+  ],
+  "sendInLonLat": "116.310917, 39.985402",
+  "sendInTime": "2025-09-26T06:47:18.735Z",
+  "sendInUpdateLonLat": "116.320138, 39.985652",
+  "sendInUpdateTime": "2025-09-26T08:19:50.292Z",
+  "sendOutLonLat": "116.332321, 39.986271",
+  "sendOutTime": "2025-09-26T06:48:06.735Z",
+  "sendOutUpdateLonLat": "116.336427, 39.986426",
+  "sendOutUpdateTime": "2025-09-26T08:20:33.292Z",
+  "receiveFenceShapeType": 2,
+  "receiveFence": [
+    116.400972,
+    39.988587
+  ],
+  "receiveFenceRadius": 0.5,
+  "receiveFenceList": [
+    {
+      "longitude": "116.395742",
+      "latitude": "39.991692"
+    },
+    {
+      "longitude": "116.401449",
+      "latitude": "39.990803"
+    },
+    {
+      "longitude": "116.400784",
+      "latitude": "39.988137"
+    },
+    {
+      "longitude": "116.395804",
+      "latitude": "39.987983"
+    }
+  ],
+  "receiveInLonLat": "116.397032, 39.988750",
+  "receiveInTime": "2025-09-26T08:10:45.228Z",
+  "receiveInUpdateLonLat": "116.398418, 39.989919",
+  "receiveInUpdateTime": "2025-09-26T08:18:31.292Z",
+  "receiveOutLonLat": "116.393911, 39.988219",
+  "receiveOutTime": "2025-09-26T08:11:08.228Z",
+  "receiveOutUpdateLonLat": "116.391340, 39.988445",
+  "receiveOutUpdateTime": "2025-09-26T08:18:54.292Z"
+}

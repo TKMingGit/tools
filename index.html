@@ -596,7 +596,7 @@
 
             let fenceInfo = document.getElementById('fence-inout');
             if (fenceInfo) {
-                let jsonObj = {"sendFenceShapeType":1,"sendFence":[116.317646,39.985438],"sendFenceRadius":1,"sendInLonLat":"116.310917, 39.985402","sendInTime":"2025-09-26T06:47:18.735Z","sendInUpdateLonLat":"116.320138, 39.985652","sendInUpdateTime":"2025-09-26T08:19:50.292Z","sendOutLonLat":"116.332321, 39.986271","sendOutTime":"2025-09-26T06:48:06.735Z","sendOutUpdateLonLat":"116.336427, 39.986426","sendOutUpdateTime":"2025-09-26T08:20:33.292Z","receiveFenceShapeType":1,"receiveFence":[116.400972,39.988587],"receiveFenceRadius":0.5,"receiveInLonLat":"116.397032, 39.988750","receiveInTime":"2025-09-26T08:10:45.228Z","receiveInUpdateLonLat":"116.398418, 39.989919","receiveInUpdateTime":"2025-09-26T08:18:31.292Z","receiveOutLonLat":"116.393911, 39.988219","receiveOutTime":"2025-09-26T08:11:08.228Z","receiveOutUpdateLonLat":"116.391340, 39.988445","receiveOutUpdateTime":"2025-09-26T08:18:54.292Z"};
+                let jsonObj = {"sendFenceShapeType":1,"sendFence":[116.317646,39.985438],"sendFenceRadius":1,"sendFenceList":[{"longitude":"116.304402","latitude":"39.991465"},{"longitude":"116.325680","latitude":"39.993572"},{"longitude":"116.330955","latitude":"39.985216"},{"longitude":"116.325563","latitude":"39.977722"},{"longitude":"116.306043","latitude":"39.981591"}],"sendInLonLat":"116.310917, 39.985402","sendInTime":"2025-09-26T06:47:18.735Z","sendInUpdateLonLat":"116.320138, 39.985652","sendInUpdateTime":"2025-09-26T08:19:50.292Z","sendOutLonLat":"116.332321, 39.986271","sendOutTime":"2025-09-26T06:48:06.735Z","sendOutUpdateLonLat":"116.336427, 39.986426","sendOutUpdateTime":"2025-09-26T08:20:33.292Z","receiveFenceShapeType":2,"receiveFence":[116.400972,39.988587],"receiveFenceRadius":0.5,"receiveFenceList":[{"longitude":"116.395742","latitude":"39.991692"},{"longitude":"116.401449","latitude":"39.990803"},{"longitude":"116.400784","latitude":"39.988137"},{"longitude":"116.395804","latitude":"39.987983"}],"receiveInLonLat":"116.397032, 39.988750","receiveInTime":"2025-09-26T08:10:45.228Z","receiveInUpdateLonLat":"116.398418, 39.989919","receiveInUpdateTime":"2025-09-26T08:18:31.292Z","receiveOutLonLat":"116.393911, 39.988219","receiveOutTime":"2025-09-26T08:11:08.228Z","receiveOutUpdateLonLat":"116.391340, 39.988445","receiveOutUpdateTime":"2025-09-26T08:18:54.292Z"};
                 fenceInfo.value = JSON.stringify(jsonObj, null, 2);
             }
         });
@@ -871,8 +871,8 @@
             showMessage('圆形围栏创建成功', 'success');
         }
 
-        // 通过参数构建围栏
-        function renderCircleFromParam(centerText,radius,fenceColor,fenceOpacity) {
+        // 通过参数构建圆形围栏
+        function renderCircleFromParam(centerText, radius, fenceColor, fenceOpacity) {
             // 验证输入
             if (!centerText.trim()) {
                 showMessage('请输入圆心坐标', 'error');
@@ -1083,11 +1083,22 @@
                 showMessage('多边形至少需要三个点', 'error');
                 return;
             }
-            
-            var fenceColor = document.getElementById('fence-color').value;
-            var fenceOpacity = parseFloat(document.getElementById('fence-opacity').value);
-            
-            var polygon = new AMap.Polygon({
+
+            const fenceColor = document.getElementById('fence-color').value;
+            const fenceOpacity = parseFloat(document.getElementById('fence-opacity').value);
+
+            renderPolygonFromParam(coords, fenceColor, fenceOpacity);
+            showMessage('多边形围栏创建成功', 'success');
+        }
+
+        // 通过参数构建多边形围栏
+        function renderPolygonFromParam(coords, fenceColor, fenceOpacity) {
+            if (coords.length < 3) {
+                showMessage('多边形至少需要三个点', 'error');
+                return;
+            }
+
+            const polygon = new AMap.Polygon({
                 path: coords,
                 strokeColor: "#FF33FF",
                 strokeWeight: 2,
@@ -1101,7 +1112,7 @@
             coords.forEach(function(coord) {
                 addPolygonPointMarker(new AMap.LngLat(coord[0], coord[1]), polygonPointMarkersCus);
             });
-            
+
             fences.push({
                 type: 'polygon',
                 object: polygon,
@@ -1828,9 +1839,21 @@
                 deleteFenceInoutInfo();
 
                 // 统一渲染方法
-                function renderFenceAndPoints(center, radiusKm, inLonLat, inTime, inUpdateLonLat, inUpdateTime, outLonLat, outTime, outUpdateLonLat, outUpdateTime, fenceColor, fenceTip) {
-                    if (!center || !radiusKm) return;
-                    renderCircleFromParam(center[0]+','+center[1], radiusKm*1000, fenceColor, fenceOpacity)
+                function renderFenceAndPoints(fenceShapeType, centerLonLat, radiusKm, coords, inLonLat, inTime, inUpdateLonLat, inUpdateTime, outLonLat, outTime, outUpdateLonLat, outUpdateTime, fenceColor, fenceTip) {
+                    if (fenceShapeType === 1) {
+                        // 圆形
+                        if (!centerLonLat || !radiusKm) return;
+
+                        renderCircleFromParam(centerLonLat[0]+','+centerLonLat[1], radiusKm * 1000, fenceColor, fenceOpacity)
+                    } else {
+                        // 多边形
+                        if (!coords || coords.length === 0) return;
+
+                        let path = coords.map(c => [parseFloat(c.longitude), parseFloat(c.latitude)]);
+                        if (path.length < 3) return;
+
+                        renderPolygonFromParam(path, fenceColor, fenceOpacity);
+                    }
 
                     addMarker(new AMap.LngLat(inLonLat.split(",")[0], inLonLat.split(",")[1]), inTime, null, fenceTip + "进入", "./images/fence-in-blue-dot.png");
                     addMarker(new AMap.LngLat(inUpdateLonLat.split(",")[0], inUpdateLonLat.split(",")[1]), inUpdateTime, null, fenceTip + "进入更新", "./images/fence-in-update-green-dot.png");
@@ -1842,8 +1865,10 @@
 
                 // sendFence
                 renderFenceAndPoints(
+                    obj.sendFenceShapeType,
                     obj.sendFence,
                     parseFloat(obj.sendFenceRadius),
+                    obj.sendFenceList,
                     obj.sendInLonLat, obj.sendInTime,
                     obj.sendInUpdateLonLat, obj.sendInUpdateTime,
                     obj.sendOutLonLat, obj.sendOutTime,
@@ -1854,8 +1879,10 @@
 
                 // receiveFence
                 renderFenceAndPoints(
+                    obj.receiveFenceShapeType,
                     obj.receiveFence,
                     parseFloat(obj.receiveFenceRadius),
+                    obj.receiveFenceList,
                     obj.receiveInLonLat, obj.receiveInTime,
                     obj.receiveInUpdateLonLat, obj.receiveInUpdateTime,
                     obj.receiveOutLonLat, obj.receiveOutTime,
