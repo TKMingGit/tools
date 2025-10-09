@@ -1371,6 +1371,21 @@
             });
             markers = [];
             updatePointList();
+
+            importedTracks.forEach(function(track) {
+                if (track.polyline) map.remove(track.polyline);
+                if (track.carMarker) map.remove(track.carMarker);
+                if (track.pointMarkers) {
+                    track.pointMarkers.forEach(function(marker) {
+                        if (marker.infoMarker) {
+                            map.remove(marker.infoMarker);
+                        }
+                        map.remove(marker);
+                    });
+                }
+            });
+
+            importedTracks = [];
             
             // 清除轨迹线
             if (currentMarkerPolyline) {
@@ -1717,22 +1732,6 @@
         // 删除通过json对象方式导入的轨迹
         function deleteImportedTracks() {
             clearAllMarkers();
-
-            importedTracks.forEach(function(track) {
-                if (track.polyline) map.remove(track.polyline);
-                if (track.carMarker) map.remove(track.carMarker);
-                if (track.pointMarkers) {
-                    track.pointMarkers.forEach(function(marker) {
-                        if (marker.infoMarker) {
-                            map.remove(marker.infoMarker);
-                        }
-                        map.remove(marker);
-                    });
-                }
-            });
-
-            importedTracks = [];
-
             showMessage('已删除导入的轨迹', 'info');
         }
 
