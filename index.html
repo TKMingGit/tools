@@ -1906,13 +1906,13 @@
                     if (inLonLat && inLonLat.indexOf(",") !== -1) {
                         addMarker(new AMap.LngLat(inLonLat.split(",")[0], inLonLat.split(",")[1]), inTime, null, fenceTip + "进入", "./images/fence-in-blue-dot.png");
                     }
-                    if (inLonLat && inUpdateLonLat.indexOf(",") !== -1) {
+                    if (inUpdateLonLat && inUpdateLonLat.indexOf(",") !== -1) {
                         addMarker(new AMap.LngLat(inUpdateLonLat.split(",")[0], inUpdateLonLat.split(",")[1]), inUpdateTime, null, fenceTip + "进入更新", "./images/fence-in-update-green-dot.png");
                     }
-                    if (inLonLat && outLonLat.indexOf(",") !== -1) {
+                    if (outLonLat && outLonLat.indexOf(",") !== -1) {
                         addMarker(new AMap.LngLat(outLonLat.split(",")[0], outLonLat.split(",")[1]), outTime, null, fenceTip + "离开", "./images/fence-out-red-dot.png");
                     }
-                    if (inLonLat && outUpdateLonLat.indexOf(",") !== -1) {
+                    if (outUpdateLonLat && outUpdateLonLat.indexOf(",") !== -1) {
                         addMarker(new AMap.LngLat(outUpdateLonLat.split(",")[0], outUpdateLonLat.split(",")[1]), outUpdateTime, null, fenceTip + "离开更新","./images/fence-out-update-yellow-dot.png");
                     }
 
