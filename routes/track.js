@@ -21,7 +21,6 @@ router.get("/", async (req, res) => {
 
   try {
     const db = req.app.locals.dbs?.[dataSource];
-    console.log("Using DB:", dataSource, db)
 
     if (!db) {
       return res.status(400).json({ msg: "无效的数据源" });
