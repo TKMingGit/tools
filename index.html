@@ -466,6 +466,12 @@
                     </div>
 
                     <div class="btn-group">
+                        <button id="play"><i>▶</i>播放轨迹</button>
+                        <button id="pause"><i>⏸</i>暂停</button>
+                        <button id="resume"><i>🔁</i>继续</button>
+                    </div>
+
+                    <div class="btn-group">
                         <input type="file" id="json-file" accept="application/json">
                         <button id="import-track-jsonFile-template">📥 下载模板(JSON文件)</button>
                         <button id="import-track-jsonFile">📥 导入轨迹(JSON文件)</button>
@@ -523,12 +529,17 @@
 
     <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=d604e181c6929b3e48ad62deeddae7f4"></script>
     <script>
-        // 初始化地图
-        var map = new AMap.Map('map', {
-            zoom: 11,
-            center: [116.397428, 39.90923]
+        // ✅ 先加载 MoveAnimation 插件，再初始化地图
+        AMap.plugin(['AMap.MoveAnimation'], function() {
+            console.log("✅ MoveAnimation 插件已加载完成");
+
+            // 初始化地图
+            window.map = new AMap.Map('map', {
+                zoom: 11,
+                center: [116.397428, 39.90923]
+            });
         });
-        
+
         // 存储标记点和围栏的数组
         var markers = [];
         var fences = [];
@@ -633,13 +644,22 @@
         });
 
         document.getElementById('import-track-jsonObj').addEventListener('click', e => importTrackByJsonObj(1));
+
         document.getElementById('import-track-jsonObj-gd').addEventListener('click', e => importTrackByJsonObj(2));
+
         document.getElementById('delete-tracks-btn').addEventListener('click', deleteImportedTracks);
+
+        document.getElementById('play').addEventListener('click', startCarMoving);
+
+        document.getElementById('pause').addEventListener('click', pauseCarMoving);
+
+        document.getElementById('resume').addEventListener('click', resumeCarMoving);
 
         // 查询轨迹
         document.getElementById("query-track-mongo").addEventListener("click", queryTrackFromMongo);
 
         document.getElementById('import-track-jsonFile-template').addEventListener('click', importTrackByJsonFileTemplate);
+
         document.getElementById('import-track-jsonFile').addEventListener('click', importTrackByJsonFile);
 
         document.getElementById('export-points').addEventListener('click', exportPoints);
@@ -656,6 +676,7 @@
         });
 
         document.getElementById('fence-inout-jsonObj').addEventListener('click', fenceInoutInfo);
+
         document.getElementById('delete-fence-inout-btn').addEventListener('click', deleteFenceInoutInfo);
 
         // 设置活动按钮样式
@@ -1370,7 +1391,6 @@
                 map.remove(marker);
             });
             markers = [];
-            updatePointList();
 
             importedTracks.forEach(function(track) {
                 if (track.polyline) map.remove(track.polyline);
@@ -1392,6 +1412,12 @@
                 map.remove(currentMarkerPolyline);
                 currentMarkerPolyline = null;
             }
+
+            if (window.carMarker) {
+                map.remove(window.carMarker);
+            }
+
+            updatePointList();
             
             showMessage('所有标记点已清除', 'info');
         }
@@ -1424,7 +1450,13 @@
                 strokeStyle: "solid",
                 map: map
             });
-            
+
+
+            // 保存本次导入的轨迹对象
+            importedTracks.push({
+                path: path,
+            });
+
             // 调整地图视野以显示整个轨迹
             map.setFitView([currentMarkerPolyline]);
             showMessage('轨迹绘制完成', 'success');
@@ -1660,73 +1692,79 @@
             });
             map.add(polyline);
 
-            // 小车 marker（用小图标替代）
-            let carMarker = new AMap.Marker({
-                map: map,
-                position: path[0],
-                icon: new AMap.Icon({
-                    image: "./images/icon-car.png",
-                    size: new AMap.Size(20, 20), // 缩小图标大小，原始为 30x30，可以调整为更小
-                    imageSize: new AMap.Size(20, 20) // 适应缩放比例
-                }),
-                offset: new AMap.Pixel(-7, -13),
-                autoRotation: true,
-                angle: 0,
-            });
-
             // 保存本次导入的轨迹对象
             importedTracks.push({
+                path: path,
                 polyline: polyline,
-                pointMarkers: pointMarkers,
-                carMarker: carMarker
+                pointMarkers: pointMarkers
             });
 
             // 自动缩放视野
             map.setFitView([polyline]);
 
             showMessage(`成功导入 ${path.length} 个轨迹点并绘制轨迹线`, 'success');
-
-            // 启动小车沿轨迹线运行
-            startCarMoving(path, carMarker);
         }
 
-        // 小车沿轨迹线运行的函数
-        function startCarMoving(path, carMarker) {
-            if (!path || path.length < 2) return;
+        // 播放轨迹
+        function startCarMoving() {
+            if (importedTracks.length === 0) {
+                showMessage('请先原生导入轨迹', 'error');
+                return;
+            }
 
-            let index = 0; // 当前轨迹点索引
-            let speed = 200; // 每隔0.2秒钟移动一个轨迹点
-            let moveInterval = setInterval(function() {
-                if (index >= path.length - 1) {
-                    clearInterval(moveInterval); // 停止移动
-                    map.remove(carMarker); // 移除小车
-                    return;
+            const points = importedTracks[0].path;
+            if (points.length < 2) {
+                showMessage('播放轨迹至少两个轨迹点', 'info');
+                return;
+            }
+
+            // 创建车辆图标
+            if (window.carMarker) {
+                map.remove(window.carMarker);
+            }
+
+            window.carMarker = new AMap.Marker({
+                map: map,
+                position: points[0],
+                icon: new AMap.Icon({
+                    image: "./images/icon-car.png",
+                    size: new AMap.Size(20, 20), // 缩小图标大小，原始为 30x30，可以调整为更小
+                    imageSize: new AMap.Size(20, 20) // 适应缩放比例
+                }),
+                offset: new AMap.Pixel(-13, -13),
+                autoRotation: true
+            });
+
+            // 播放动画（duration=总时长，越小越快）
+            const totalDuration = points.length * 20; // 每点20ms
+            window.carMarker.moveAlong(points, {
+                duration: totalDuration,
+                autoRotation: true
+            });
+
+            // === 只在最后一个点播放完后提示（而非每段）===
+            let length = 0;
+            window.carMarker.on('moveend', () => {
+                if (length === points.length - 2) {
+                    showMessage('轨迹播放完成', 'info');
                 }
 
-                index++;
-                let currentPoint = path[index - 1];
-                let nextPoint = path[index];
-
-                let currentLngLat = new AMap.LngLat(currentPoint[0], currentPoint[1]);
-                let nextLngLat = new AMap.LngLat(nextPoint[0], nextPoint[1]);
-
-                // 计算车头的旋转角度
-                let angle = calculateAngle(currentLngLat, nextLngLat);
-
-                // 更新小车的位置
-                carMarker.setPosition(nextLngLat);
-
-                // 旋转小车图标，让车头指向下一个点
-                carMarker.setAngle(angle);
-            }, speed);
+                length++;
+            });
         }
 
-        // 计算两个经纬度之间的方位角
-        function calculateAngle(currentLngLat, nextLngLat) {
-            let dx = nextLngLat.getLng() - currentLngLat.getLng();
-            let dy = nextLngLat.getLat() - currentLngLat.getLat();
-             // 转换为度数
-            return Math.atan2(dy, dx) * (180 / Math.PI);
+        // 暂停播放
+        function pauseCarMoving() {
+            if (window.carMarker) {
+                window.carMarker.pauseMove();
+            }
+        }
+
+        // 继续播放
+        function resumeCarMoving() {
+            if (window.carMarker) {
+                window.carMarker.resumeMove();
+            }
         }
 
         // 删除通过json对象方式导入的轨迹
@@ -1796,7 +1834,7 @@
                 return;
             }
 
-            deleteImportedTracks();
+            clearAllMarkers();
 
             var file = fileInput.files[0];
             var reader = new FileReader();
@@ -1839,7 +1877,6 @@
 
             showMessage('轨迹已导出为 JSON 文件', 'success');
         }
-
 
         // 更新点位列表显示
         function updatePointList() {
