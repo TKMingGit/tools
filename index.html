@@ -1752,10 +1752,9 @@
                 autoRotation: true
             });
 
-            // 播放动画（duration=总时长，越小越快）
-            const totalDuration = points.length * 20; // 每点20ms
+            // 播放动画（duration：两点间时间，越小越快）
             window.carMarker.moveAlong(points, {
-                duration: totalDuration,
+                duration: 100,
                 autoRotation: true
             });
 
