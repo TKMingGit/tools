@@ -507,6 +507,12 @@
                             <option value="test">test</option>
                             <option value="pre">pre</option>
                         </select>
+                        <label for="trajectorySource">轨迹源:</label>
+                        <select id="trajectorySource">
+                            <option value="all">全部</option>
+                            <option value="0">中交</option>
+                            <option value="1">OBD</option>
+                        </select>
                         <button id="query-track-mongo"><i>🔍</i> 查询</button>
                     </div>
                 </div>
@@ -1805,6 +1811,7 @@
             let endTime = ensureSeconds(document.getElementById("endTime").value);
             let collectionDate = document.getElementById("collectionDate").value.trim();
             let dataSource = document.getElementById("dataSource").value;
+            let trajectorySource = document.getElementById("trajectorySource").value;
 
             // 如果没填，默认当天0点到次日0点
             if (!startTime || !endTime) {
@@ -1817,7 +1824,7 @@
             }
 
             try {
-                const resp = await fetch(`/api/tracks?plateNo=${plateNo}&start=${startTime}&end=${endTime}&collectionDate=${collectionDate}&dataSource=${dataSource}`);
+                const resp = await fetch(`/api/tracks?plateNo=${plateNo}&start=${startTime}&end=${endTime}&collectionDate=${collectionDate}&dataSource=${dataSource}&trajectorySource=${trajectorySource}`);
                 const jsonObj = await resp.json();
 
                 if (!jsonObj || !jsonObj.data || !jsonObj.data.arrLocationInfo || jsonObj.data.arrLocationInfo.length === 0) {

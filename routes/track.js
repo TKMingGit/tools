@@ -13,11 +13,10 @@ const options = {
 
 // GET /api/tracks?plateNo=川8888885&start=2025-09-29T08:00:00&end=2025-09-29T20:00:00&collection=20250921&dataSource=local
 router.get("/", async (req, res) => {
-  const { plateNo, start, end, collectionDate, dataSource } = req.query;
-  if (!plateNo || !start || !end || !collectionDate || !dataSource) {
+  const { plateNo, start, end, collectionDate, dataSource, trajectorySource} = req.query;
+  if (!plateNo || !start || !end || !collectionDate || !dataSource || !trajectorySource) {
     return res.status(400).json({ msg: "参数缺失" });
   }
-  console.log("Received params:", { plateNo, start, end, collectionDate, dataSource });
 
   try {
     const db = req.app.locals.dbs?.[dataSource];
@@ -28,12 +27,19 @@ router.get("/", async (req, res) => {
 
     const collection = db.collection("xn_m_vehicle_last_location" + collectionDate);
 
-    const docs = await collection.find({
+    // 构造查询条件
+    const query = {
       vno: plateNo,
       utc: { $gte: new Date(start).getTime(), $lte: new Date(end).getTime() }
-    })
-    .sort({ locationTime: 1 })
-    .toArray();
+    };
+
+    if (trajectorySource && trajectorySource !== "all") {
+      query.trajectorySource = Number(trajectorySource);
+    }
+
+    console.log("query:", JSON.stringify(query));
+
+    const docs = await collection.find(query).sort({ locationTime: 1 }).toArray();
 
     console.log("cnt:", docs.length);
 
@@ -46,7 +52,8 @@ router.get("/", async (req, res) => {
           longitude: d.lon,
           latitude: d.lat,
           locationTime: new Date(d.utc).toLocaleString("zh-CN", options).replaceAll("/", "-"),
-          crt: new Date(d.createDate).toLocaleString("zh-CN", options).replaceAll("/", "-")
+          crt: new Date(d.createDate).toLocaleString("zh-CN", options).replaceAll("/", "-"),
+          trajectorySource: d.trajectorySource,
         }))
       }
     });
