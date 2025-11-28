@@ -39,7 +39,7 @@ router.get("/", async (req, res) => {
 
     console.log("query:", JSON.stringify(query));
 
-    const docs = await collection.find(query).sort({ locationTime: 1 }).toArray();
+    const docs = await collection.find(query).sort({ utc: 1 }).toArray();
 
     console.log("cnt:", docs.length);
 
