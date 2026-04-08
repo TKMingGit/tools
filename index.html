@@ -1693,7 +1693,7 @@
                     pointMarker = new AMap.Marker({
                         position: lnglat,
                         map: map,
-                        title: "途径点",
+                        title: "途径点\n" + `速度: ${speed} km/h \n坐标: ${lon.toFixed(6)}, ${lat.toFixed(6)} \n 时间: ${item.locationTime || ''} \n创建时间: ${item.crt || item.locationTime}`,
                         content: '<div style="width:8px;height:8px;background:#3366FF;border-radius:50%;border:1px solid white;"></div>',
                         offset: new AMap.Pixel(-4, -4)
                     });
@@ -1701,51 +1701,12 @@
 
                 pointMarker.info = { lon: lon, lat: lat, utc: item.locationTime, crt: item.crt };
 
-                // 点击弹出 InfoWindow
-                pointMarker.infoMarker = null;
-                pointMarker.on('click', function() {
-                    if (pointMarker.infoMarker) {
-                        // 已经有 infoWindow，就不重复创建
-                        return;
-                    }
-
-                    let infoDom = document.createElement('div');
-                    infoDom.className = 'custom-info-window';
-                    infoDom.innerHTML = `
-                    <div class="ciw-header">
-                        <span><strong>轨迹点</strong></span>
-                        <div class="ciw-actions">
-                            <span class="ciw-close">×</span>
-                        </div>
-                    </div>
-                    <div class="ciw-body">
-                        <p>速度: ${speed} km/h</p>
-                        <p>坐标: ${lon.toFixed(6)}, ${lat.toFixed(6)}</p>
-                        <p>时间: ${item.locationTime || ''}</p>
-                        <p>创建时间: ${item.crt || item.locationTime}</p>
-                    </div>
-                `;
-
-                    let infoMarker = new AMap.Marker({
-                        position: lnglat,
-                        offset: new AMap.Pixel(-100, -142),
-                        content: infoDom,
-                        map: map
-                    });
-                    pointMarker.infoMarker = infoMarker;
-
-                    // 关闭按钮
-                    infoDom.querySelector('.ciw-close').onclick = function() {
-                        map.remove(infoMarker);
-                        pointMarker.infoMarker = null;
-                    };
-                });
-
                 //添加到点位集合
                 pointMarkers.push(pointMarker);
 
                 markers.push(pointMarker);
-                updatePointList();
+
+                showMessage(`成功导入 ${arr.length} 个点位并绘制速度彩色轨迹`, 'success');
             }
 
             // 绘制分段彩色轨迹（替换旧的轨迹线绘制）
@@ -2075,7 +2036,6 @@
             clearAllMarkers();
             showMessage('围栏与点位清除完成', 'success');
         }
-
 
         // 渲染 ALARM 打卡点
         function clockInInfo() {
