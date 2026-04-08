@@ -1675,7 +1675,7 @@
                     pointMarker = new AMap.Marker({
                         position: lnglat,
                         map: map,
-                        title: "起点",
+                        title: "起点\n" + `速度: ${speed} km/h \n坐标: ${lon.toFixed(6)}, ${lat.toFixed(6)} \n 时间: ${item.locationTime || ''} \n创建时间: ${item.crt || item.locationTime}`,
                         icon: "./images/marker-icon-green.png",
                         offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
                     });
@@ -1684,7 +1684,7 @@
                     pointMarker = new AMap.Marker({
                         position: lnglat,
                         map: map,
-                        title: "终点",
+                        title: "终点\n" + `速度: ${speed} km/h \n坐标: ${lon.toFixed(6)}, ${lat.toFixed(6)} \n 时间: ${item.locationTime || ''} \n创建时间: ${item.crt || item.locationTime}`,
                         icon: "./images/marker-icon-red.png",
                         offset: new AMap.Pixel(-12.5, -41) // 图标宽25px，高41px，底部中心对齐
                     });
