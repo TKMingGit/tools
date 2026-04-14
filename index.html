@@ -542,7 +542,7 @@
         <p>高德地图电子围栏与轨迹绘制工具 © 2023 | 基于高德地图JavaScript API实现</p>
     </div>
 
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=d604e181c6929b3e48ad62deeddae7f4"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=9648007c2b28f7423bdab4610b3fe6e7"></script>
     <script>
         // ✅ 先加载 MoveAnimation 插件，再初始化地图
         AMap.plugin(['AMap.MoveAnimation'], function() {
@@ -1395,13 +1395,12 @@
                         }
                     }
 
-                    updatePointList();
                     showMessage('标记点已删除', 'info');
                 };
             });
 
             markers.push(marker);
-            updatePointList();
+            // updatePointList();
         }
 
         var currentMarkerPolyline = null;
@@ -1579,6 +1578,9 @@
 
             var pointsWithSpeed = [];
             arr.forEach(function(item) {
+                if (item.locationMode === 1111000) {
+                    return;
+                }
                 var lng = parseFloat(item.longitude);
                 var lat = parseFloat(item.latitude);
                 var timeStr = item.locationTime || '';
@@ -1621,7 +1623,7 @@
                 map.setFitView(polylines);
             }
 
-            updatePointList();
+            // updatePointList();
             showMessage(`成功导入 ${arr.length} 个点位并绘制速度彩色轨迹`, 'success');
         }
 
@@ -1652,6 +1654,9 @@
 
             for (let i = 0; i < arr.length; i++) {
                 let item = arr[i];
+                if (item.locationMode === 1111000) {
+                    continue;
+                }
                 let lon = parseFloat(item.longitude);
                 let lat = parseFloat(item.latitude);
                 let speed = Number(item.speed) || 0;
@@ -1745,7 +1750,7 @@
                 pointMarkers.push(pointMarker);
 
                 markers.push(pointMarker);
-                updatePointList();
+                // updatePointList();
             }
 
             // 绘制分段彩色轨迹（替换旧的轨迹线绘制）
